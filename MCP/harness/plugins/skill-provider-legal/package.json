@@ -1,0 +1,22 @@
+{
+  "name": "@law-agent/skill-provider-legal",
+  "version": "0.1.0",
+  "description": "[P1 Plugin] 法律技能动态激活插件。扫描 skills/*.json 文件，通过 ctx.skills.registerProvider() 注册为 DSH SkillProvider，实现按 Profile 自动激活技能包。替代静态 JSON 卡片方案，让技能可以被 DSH 运行时动态发现和加载。",
+  "private": true,
+  "main": "src/provider.js",
+  "files": ["cordis.patch.yml", "src/provider.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "skill-provider",
+    "cordis-plugin",
+    "dynamic-skill-activation",
+    "legal-skills"
+  ],
+  "license": "MIT"
+}

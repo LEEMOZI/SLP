@@ -1,0 +1,106 @@
+# @law-agent/law-search-dsh-bundle cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# DSH 原生 MCP 挂载：每个 MCP server 一条 entry，包体固定用 in-box 的
+# @deepseek-ai/dsh-mcp-client（DSH 自带，无需发布 npm）。
+# 参考：DSH 源码 packages/mcp/mcp-client/README.md
+- insert:
+    # ====================================================================
+    # 1. law-search（本地 RAG MCP server）
+    # ====================================================================
+    - id: mcp-law-search
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: law-search
+        transport: stdio
+        toolCallTimeoutMs: 240000
+        command: /Users/simon/Documents/1-SLP/venv/bin/python
+        args: ['-u', '/Users/simon/Documents/1-SLP/MCP/law-search/server.py']
+        env:
+          TOKENIZERS_PARALLELISM: 'false'
+          PYTHONUNBUFFERED: '1'
+          HOME: '/Users/simon'
+          HF_HOME: '/Users/simon/.cache/huggingface'
+          LLM_PROVIDER: 'auto'
+
+    # ====================================================================
+    # 2. chinese-law（@ansvar 1,188 部法律全文检索）
+    # ====================================================================
+    - id: mcp-chinese-law
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: chinese-law
+        transport: stdio
+        command: npx
+        args: ['-y', '@ansvar/chinese-law-mcp']
+
+    # ====================================================================
+    # 3. pkulaw 北大法宝（5 个子服务，SSE 远程）
+    # ====================================================================
+    - id: mcp-pkulaw-law-search
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: pkulaw-law-search
+        transport: streamable-http
+        url: https://mcp.pkulaw.com/sse/law-search
+
+    - id: mcp-pkulaw-law-keyword
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: pkulaw-law-keyword
+        transport: streamable-http
+        url: https://mcp.pkulaw.com/sse/law-keyword
+
+    - id: mcp-pkulaw-case-semantic
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: pkulaw-case-semantic-search
+        transport: streamable-http
+        url: https://mcp.pkulaw.com/sse/case-semantic-search
+
+    - id: mcp-pkulaw-case-keyword
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: pkulaw-case-keyword
+        transport: streamable-http
+        url: https://mcp.pkulaw.com/sse/case-keyword
+
+    - id: mcp-pkulaw-citation
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: pkulaw-citation-validator
+        transport: streamable-http
+        url: https://mcp.pkulaw.com/sse/citation-validator
+
+    # ====================================================================
+    # 4. wk-mcp 威科先行（SSE 远程）
+    # ====================================================================
+    - id: mcp-wk
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: wk-mcp
+        transport: streamable-http
+        url: https://mcp.wkinfo.com/sse
+
+    # ====================================================================
+    # 5. filesystem（按需启用：去掉注释）
+    # ====================================================================
+    # - id: mcp-filesystem
+    #   name: '@deepseek-ai/dsh-mcp-client'
+    #   config:
+    #     serverName: filesystem
+    #     transport: stdio
+    #     command: npx
+    #     args: ['-y', '@modelcontextprotocol/server-filesystem',
+    #            '/Users/simon/Documents/1-Work',
+    #            '/Users/simon/Documents/1-SLP/MCP/law-search/uploads']
+
+    # ====================================================================
+    # 6. law-search-cloud（SSE）按需启用
+    # ====================================================================
+    # - id: mcp-law-search-cloud
+    #   name: '@deepseek-ai/dsh-mcp-client'
+    #   config:
+    #     serverName: law-search-cloud
+    #     transport: streamable-http
+    #     url: http://127.0.0.1:8765/mcp

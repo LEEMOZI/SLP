@@ -1,0 +1,27 @@
+
+# DSH 凭证擦除回退：本地密钥文件（勿提交）
+.secrets/
+
+# Chroma 向量库（3.3GB，不入库）
+chroma/
+
+# Chroma 快照（1.8GB，不入库）
+chroma_snapshots/
+
+# 日志（可能含检索内容）
+logs/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 运行时状态文件
+.kb_sync_state.json
+.kb_sync_state.json.pending
+.kb_sync_state.sources
+.kb_sync_state.analysis
+file_hash_index.json
+.lawsearch_chroma.lock
+
+# macOS
+.DS_Store

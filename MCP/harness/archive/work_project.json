@@ -1,0 +1,33 @@
+{
+  "_comment": "Bionic 工作台（Work Project）— 案卷材料分析 + 法律文书起草。模型走 LM Studio Secure Cloud（frontier-model-auto），deepseek_api 兜底，lm_studio_local 仅本地调试。对应双工作台架构（2026-08-30）。",
+  "profile_name": "law-agent-bionic-drafting",
+  "bionic_project_mode": "Work Project",
+  "workspace_root": "/Users/simon/Documents/1-Work",
+  "document_upload_path": "/Users/simon/Documents/0-AI/MCP/law-search/uploads",
+  "default_model_provider": "lm_studio_bionic_secure_cloud",
+  "fallback_model_provider": "deepseek_api",
+  "lightweight_fallback": "lm_studio_local",
+  "preferred_model": "frontier-model-auto",
+  "attach_mcp_servers": [
+    "law-search",
+    "filesystem"
+  ],
+  "enable_answer_guard": true,
+  "working_scenarios": [
+    "案卷材料分析（证据梳理/时间线/争点归纳）",
+    "起诉状 / 答辩状 / 代理词起草",
+    "法律意见书成稿",
+    "文书引用校验（经 law-search.search_law 回查）"
+  ],
+  "output_requirements": {
+    "citation_style": "lawyer_formatter",
+    "evidence_coverage_min": 0.9,
+    "attach_source_metadata": true
+  },
+  "trajectory_audit": {
+    "enabled": true,
+    "log_to_dsh": true,
+    "save_path": "/Users/simon/Documents/0-AI/MCP/law-search/logs/bionic_work_traces/",
+    "pii_masking": true
+  }
+}

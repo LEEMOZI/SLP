@@ -1,0 +1,22 @@
+{
+  "name": "@law-agent/ui-legal-citations",
+  "version": "0.1.0",
+  "description": "[P2 Plugin] 法律 UI 定制插件。注册 ConversationNodeDefinition 和渲染器，在 DSH Web UI 中提供法条原文折叠卡片、证据标记、引用跳转原文页、证据链时间轴等富 UI 组件。当前为骨架实现，完整功能待 DSH UI Plugin API 稳定后落地。",
+  "private": true,
+  "main": "src/ui.js",
+  "files": ["cordis.patch.yml", "src/ui.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "ui-plugin",
+    "conversation-node",
+    "legal-citations",
+    "evidence-timeline"
+  ],
+  "license": "MIT"
+}

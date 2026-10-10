@@ -1,0 +1,137 @@
+{
+  "_schema_source": "model_router.json 是本项目私有配置（非 MCP 官方 server.json），无公开 schema。请勿添加 $schema 字段——此前指向 https://developer.harness.io/3k-docs/... 为 404，会触发 DSH / IDE '无法从 https://develope...' 拉取失败。修改时间 2026-08-30。",
+  "_comment": "DeepSeek Harness Model Provider 路由规则。【真相源声明】模型与 Provider 的唯一真相源是 law-search/config/llm_config.py；本文件是 Harness 侧只读镜像，用于展示/注册，禁止在此单边修改 enabled/model/base_url 等运行值。修改流程：先改 config/llm_config.py，再同步本镜像。上次同步：2026-08-30（双工作台架构）——LM Studio 工作台负责法律检索/案例检索/合同审查/法律分析（local→deepseek auto 路由）；Bionic 工作台负责案卷材料分析/法律文书起草（secure_cloud 优先，deepseek 兜底）。",
+  "version": "1.1.0",
+  "default_strategy": "auto",
+  "providers": {
+    "lm_studio_local": {
+      "_status": "已支持（经 localhost:1234 OpenAI 兼容接口），对应 llm_config.LM_STUDIO_LOCAL",
+      "enabled": true,
+      "priority": 1,
+      "base_url": "http://localhost:1234/v1",
+      "api_key": "lm-studio",
+      "default_model": "qwen/qwen3.8-27b",
+      "compatible_models": [
+        "qwen/qwen3.8-27b",
+        "google/gemma-4-31b-qat",
+        "prism-ml/bonsai-27b",
+        "meta/muse-glimmer"
+      ],
+      "capabilities": {
+        "max_context_tokens": 32768,
+        "tool_calls": true,
+        "streaming": true
+      },
+      "enable_thinking": false,
+      "timeout_sec": 600,
+      "use_for": [
+        "short_legal_search",
+        "simple_legal_question",
+        "local_debug",
+        "lm_studio_workbench_short",
+        "code_refactor",
+        "bionic_code_project_default"
+      ],
+      "attach_interface": [
+        "lm_studio_desktop",
+        "lm_studio_workbench",
+        "bionic_code_project"
+      ]
+    },
+    "deepseek_api": {
+      "_status": "已接入并验证（Key 来自环境变量 DEEPSEEK_API_KEY，尾号 00f8），对应 llm_config.DEEPSEEK_API；enabled 实际由环境变量是否存在决定",
+      "enabled": true,
+      "enabled_env_condition": "DEEPSEEK_API_KEY",
+      "priority": 2,
+      "base_url": "https://api.deepseek.com",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "default_model": "deepseek-v4-flash",
+      "long_context_model": "deepseek-v4-pro",
+      "reasoning_model": "deepseek-v4-pro",
+      "compatible_models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ],
+      "capabilities": {
+        "max_context_tokens": 1000000,
+        "max_output_tokens": 384000,
+        "tool_calls": true,
+        "streaming": true,
+        "structured_output": true,
+        "thinking": true
+      },
+      "enable_thinking_by_model": {
+        "deepseek-v4-flash": false,
+        "deepseek-v4-pro": true
+      },
+      "reasoning_effort_by_model": {
+        "deepseek-v4-flash": "low",
+        "deepseek-v4-pro": "high"
+      },
+      "timeout_sec": 600,
+      "use_for": [
+        "contract_review_long",
+        "legal_analysis",
+        "case_research_long",
+        "research_report",
+        "legal_opinion",
+        "case_analysis",
+        "complex_legal_analysis",
+        "long_document_review",
+        "lm_studio_workbench_long"
+      ],
+      "attach_interface": [
+        "lm_studio_workbench",
+        "dsh_web_ui"
+      ]
+    },
+    "lm_studio_bionic_secure_cloud": {
+      "_status": "LM Studio Bionic Secure Cloud — Bionic 工作台默认通道（Key 来自 BIONIC_SC_API_KEY，当前未配置 → enabled=false；配置后自动生效），对应 llm_config.BIONIC_SECURE_CLOUD。分工：案卷材料分析 + 法律文书起草。",
+      "enabled": false,
+      "enabled_env_condition": "BIONIC_SC_API_KEY",
+      "priority": 3,
+      "_doc_ref": "https://lmstudio.ai/docs/bionic/secure-cloud",
+      "default_model": "frontier-model-auto",
+      "use_for": [
+        "case_file_analysis",
+        "litigation_writing",
+        "bionic_workbench_premium"
+      ],
+      "attach_interface": [
+        "bionic_work_project"
+      ]
+    },
+    "lm_link_remote": {
+      "_status": "LM Studio LM Link 远程推理设备接口预留（Key 来自 LM_LINK_API_KEY，当前未配置 → enabled=false），对应 llm_config.LM_LINK",
+      "enabled": false,
+      "enabled_env_condition": "LM_LINK_API_KEY",
+      "priority": 4,
+      "_doc_ref": "https://lmstudio.ai/docs/features/link",
+      "use_for": [
+        "remote_gpu_inference",
+        "cross_device_sharing"
+      ]
+    }
+  },
+  "routing_rules": {
+    "_comment": "对齐 llm_config.AUTO_ROUTE：阈值是 prompt 字符数（short_prompt_chars=8000），不是 token 数。双工作台分工：lm_studio_workbench = 法律检索/案例检索/合同审查/法律分析；bionic_workbench = 案卷材料分析/法律文书起草。",
+    "auto": [
+      {
+        "if": "prompt_chars < 8000 AND task_type IN [short_legal_search, simple_legal_question, code_refactor, local_debug]",
+        "then": ["lm_studio_local", "deepseek_api"]
+      },
+      {
+        "if": "prompt_chars >= 8000 OR task_type IN [contract_review_long, legal_analysis, case_research_long, research_report, legal_opinion, case_analysis, complex_legal_analysis, long_document_review]",
+        "then": ["deepseek_api", "lm_studio_local"]
+      }
+    ],
+    "lm_studio_workbench_preferred": ["lm_studio_local", "deepseek_api"],
+    "bionic_code_project_preferred": ["lm_studio_local", "deepseek_api"],
+    "bionic_workbench_preferred": ["lm_studio_bionic_secure_cloud", "deepseek_api", "lm_studio_local"]
+  },
+  "global": {
+    "total_timeout_sec": 600,
+    "temperature": 0.2,
+    "max_tokens": 4096
+  }
+}

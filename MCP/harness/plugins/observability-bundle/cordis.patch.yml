@@ -1,0 +1,110 @@
+# @law-agent/observability-bundle cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本插件向 Cordis 注册可观测性指标收集器：
+#   - 工具调用耗时（tools/post-execute）
+#   - LLM 调用成本（llm/*/stream-end）
+#   - 检索命中率（search_law/search_case 结果统计）
+#   - 会话事件（session/event）
+#
+# 指标格式兼容 OpenTelemetry Protocol (OTLP)
+#
+# 设计文档：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第六节 扩展点 #12
+
+- insert:
+    # ====================================================================
+    # 可观测性指标收集
+    # ====================================================================
+    - id: observability-legal
+      name: '@law-agent/observability-bundle'
+      config:
+        # ----------------------------------------------------------------
+        # 启用的指标收集器
+        # ----------------------------------------------------------------
+        collectors:
+          # 工具调用指标
+          - name: tool-metrics
+            enabled: true
+            description: '追踪工具调用耗时、成功/失败率'
+            event: 'tools/post-execute'
+            metrics:
+              - tool_call_duration_ms     # 工具调用耗时（毫秒）
+              - tool_call_count           # 工具调用次数
+              - tool_error_count          # 工具错误次数
+
+          # LLM 调用指标
+          - name: llm-metrics
+            enabled: true
+            description: '追踪 LLM 调用成本、Token 用量、延迟'
+            event: 'llm/*/stream-end'
+            metrics:
+              - llm_call_duration_ms      # LLM 调用耗时
+              - llm_token_input           # 输入 Token 数
+              - llm_token_output          # 输出 Token 数
+              - llm_cost_usd              # 调用成本（美元）
+              - llm_provider              # Provider 标签
+
+          # 检索命中率指标
+          - name: retrieval-metrics
+            enabled: true
+            description: '追踪检索命中率、结果数量'
+            event: 'tools/post-execute'
+            filter:
+              toolName: ['search_law', 'search_case']
+            metrics:
+              - retrieval_result_count    # 检索结果数量
+              - retrieval_hit_count       # 命中结果数（相关性 > 阈值）
+              - retrieval_latency_ms      # 检索耗时
+
+          # 会话事件指标
+          - name: session-metrics
+            enabled: false               # 默认关闭，需要更多开发
+            description: '追踪会话生命周期事件'
+            event: 'session/event'
+            metrics:
+              - session_duration_ms       # 会话持续时间
+              - session_turn_count        # 会话轮次
+              - session_tool_calls        # 会话内工具调用次数
+
+        # ----------------------------------------------------------------
+        # 指标导出配置
+        # ----------------------------------------------------------------
+        export:
+          # 导出目标
+          #   'console' — 输出到 stderr（调试用）
+          #   'otlp'    — 发送到 OTLP 端点
+          #   'file'    — 写入本地文件
+          target: console
+
+          # OTLP 端点（target=otlp 时生效）
+          otlpEndpoint: 'http://localhost:4318/v1/metrics'
+
+          # 文件路径（target=file 时生效）
+          filePath: '/Users/simon/Documents/1-SLP/MCP/law-search/logs/metrics.jsonl'
+
+          # 导出间隔（秒）
+          intervalSec: 60
+
+          # 批量大小（累积多少条指标后导出）
+          batchSize: 100
+
+        # ----------------------------------------------------------------
+        # 成本计算配置
+        # ----------------------------------------------------------------
+        costCalculation:
+          # 各 Provider 的 Token 单价（美元 / 1K tokens）
+          pricing:
+            deepseek_api:
+              input: 0.00014       # $0.14 / 1M tokens
+              output: 0.00028      # $0.28 / 1M tokens
+            lm_studio_local:
+              input: 0             # 本地推理免费
+              output: 0
+            bionic_secure_cloud:
+              input: 0.003         # 预估
+              output: 0.006
+
+        # ----------------------------------------------------------------
+        # 日志级别
+        # ----------------------------------------------------------------
+        logLevel: warn

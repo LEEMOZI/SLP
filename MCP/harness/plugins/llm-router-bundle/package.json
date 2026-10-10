@@ -1,0 +1,14 @@
+{
+  "name": "@law-agent/llm-router-bundle",
+  "version": "0.2.0",
+  "description": "[P0 Bundle] 模型路由占位层。P0 决策：Provider 管理走 DSH 原生 settings.yaml / Web Models 页（llm-deepseek + dsh-llm-pi-ai 行）；Python 侧 core/llm_client.py 继续服务 MCP pipeline 内部路由。P1 再实现自定义路由插件。",
+  "private": true,
+  "files": ["cordis.patch.yml", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": ["deepseek-harness", "law-agent", "llm-router", "cordis-plugin"],
+  "license": "MIT"
+}

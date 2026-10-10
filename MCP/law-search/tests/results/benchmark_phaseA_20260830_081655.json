@@ -1,0 +1,463 @@
+{
+  "phase": "A_retrieval",
+  "top_k": 8,
+  "cases": [
+    {
+      "id": "A1",
+      "category": "民法典",
+      "question": "民法典关于诉讼时效的规定",
+      "time_s": 10.54,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 7,
+      "law_hint_match_count": 0,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 2.7991,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "最新公司法及司法解释",
+          "article": "第一百四十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 4.5547,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第七十四条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 3.6582,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "最新公司法及司法解释",
+          "article": "第九十五条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 3.3164,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "中华人民共和国证券法",
+          "article": "第三十三条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "rerank_score": 2.9121,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "最新公司法及司法解释",
+          "article": "第三十二条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 2.6992,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "category": "民法典",
+      "question": "合同解除权的行使期限",
+      "time_s": 6.75,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 7,
+      "law_hint_match_count": 1,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 1.2214,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "中华人民共和国民法典",
+          "article": "第564条",
+          "source": "公司法600问（上）",
+          "rerank_score": 4.8906,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "中华人民共和国公司法",
+          "article": "第十八条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "rerank_score": 3.1719,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "公司法600问",
+          "article": "第一百四十二条",
+          "source": "公司法600问（上） (公司法600问（上）.pdf)",
+          "rerank_score": 1.7793,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "中华人民共和国公司法",
+          "article": "第18条",
+          "source": "公司法600问（上）",
+          "rerank_score": 0.3054,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "公司法600问",
+          "article": "第五百八十四条",
+          "source": "公司法600问（上） (公司法600问（上）.pdf)",
+          "rerank_score": 0.2761,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "category": "民法典",
+      "question": "夫妻共同债务的认定标准",
+      "time_s": 6.31,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 5,
+      "law_hint_match_count": 1,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 0.8724,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "中华人民共和国公司法",
+          "article": "第10条",
+          "source": "公司法600问（上）",
+          "rerank_score": 2.1934,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "中华人民共和国公司法",
+          "article": "第一千零六十二条",
+          "source": "公司法600问（上）",
+          "rerank_score": 1.8779,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国公司法",
+          "article": "第63条",
+          "source": "公司法600问（上）",
+          "rerank_score": 1.0186,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "最新公司法及司法解释",
+          "article": "第三百零三条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 0.9912,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国公司法",
+          "article": "第28条",
+          "source": "公司法600问（上）",
+          "rerank_score": 0.5776,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "category": "公司法",
+      "question": "股东出资不实的连带责任",
+      "time_s": 6.33,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 8,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 5.7827,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "中华人民共和国公司法",
+          "article": "第31条,第94条,第13条",
+          "source": "公司法600问（上）",
+          "rerank_score": 7.0156,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第五十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 6.7422,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国公司法",
+          "article": "第50条,第99条,第13条,第1条,第",
+          "source": "公司法600问（上）",
+          "rerank_score": 5.7578,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "公司法600问",
+          "article": "第13条",
+          "source": "公司法600问（上） (公司法600问（上）.pdf)",
+          "rerank_score": 5.5781,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国公司法",
+          "article": "第49条,第252条,第253条",
+          "source": "公司法600问（上）",
+          "rerank_score": 5.5195,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "category": "公司法",
+      "question": "股东会决议无效与可撤销的情形",
+      "time_s": 6.39,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 8,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 5.4902,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "中华人民共和国公司法",
+          "article": "第153条,第26条",
+          "source": "公司法600问（上）",
+          "rerank_score": 6.1367,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第二十八条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 5.918,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国公司法",
+          "article": "第15条,第26条",
+          "source": "公司法600问（上）",
+          "rerank_score": 5.4922,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "中华人民共和国公司法",
+          "article": "第134条,第153条,第25条",
+          "source": "公司法600问（上）",
+          "rerank_score": 5.3906,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国公司法",
+          "article": "第26条,第59条,第67条,第163条",
+          "source": "公司法600问（上）",
+          "rerank_score": 5.3906,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "category": "刑法",
+      "question": "刑事责任年龄的法律规定",
+      "time_s": 3.95,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 0,
+      "law_hint_match_count": 0,
+      "recall_hit_at_1": false,
+      "recall_hit_at_3": false,
+      "avg_authority": 100.0,
+      "avg_rerank_score": -0.2134,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "最新公司法及司法解释",
+          "article": "第七条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 2.7031,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第一百三十一条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 0.4585,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "最新公司法及司法解释",
+          "article": "第二百六十四条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 0.3215,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "最新公司法及司法解释",
+          "article": "第二十四条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -0.115,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "最新公司法及司法解释",
+          "article": "第五十一条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -1.0654,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A7",
+      "category": "劳动法",
+      "question": "试用期最长可以约定多久？",
+      "time_s": 6.29,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 1,
+      "law_hint_match_count": 0,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": false,
+      "avg_authority": 100.0,
+      "avg_rerank_score": -2.3286,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "最新公司法及司法解释",
+          "article": "第七十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -0.5957,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -1.1094,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "最新公司法及司法解释",
+          "article": "第二十四条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -2.2207,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "最新公司法及司法解释",
+          "article": "第三十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": -2.2422,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国证券法",
+          "article": "第一百五十九条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "rerank_score": -2.9082,
+          "authority": 100.0
+        }
+      ]
+    },
+    {
+      "id": "A8",
+      "category": "劳动法",
+      "question": "违法解除劳动合同的赔偿金计算",
+      "time_s": 6.29,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 2,
+      "law_hint_match_count": 0,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 100.0,
+      "avg_rerank_score": 0.4928,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "中华人民共和国企业破产法",
+          "article": "第五十六条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "rerank_score": 3.0371,
+          "authority": 100.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第六十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 1.4512,
+          "authority": 100.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国民法典",
+          "article": "第二十四条,第24条",
+          "source": "公司法600问（上）",
+          "rerank_score": 1.207,
+          "authority": 100.0
+        },
+        {
+          "rank": 4,
+          "law_name": "公司法600问",
+          "article": "第五百八十四条",
+          "source": "公司法600问（上） (公司法600问（上）.pdf)",
+          "rerank_score": -0.0154,
+          "authority": 100.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国公司法",
+          "article": "第十八条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "rerank_score": -0.2625,
+          "authority": 100.0
+        }
+      ]
+    }
+  ],
+  "total_time_s": 52.86,
+  "aggregate": {
+    "Hit@1_rate": 0.88,
+    "Hit@3_rate": 0.75,
+    "avg_relevant_per_query": 4.75,
+    "avg_lawhint_match_per_query": 2.25,
+    "avg_authority": 100.0,
+    "avg_time_per_query_s": 6.61
+  }
+}

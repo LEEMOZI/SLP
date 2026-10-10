@@ -1,0 +1,111 @@
+# @law-agent/policy-legal-safety-bundle cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本 bundle 向 Cordis 注册一个自定义安全插件 entry，
+# 在 tools/pre-execute waterfall 上实现三层拦截：
+#   Layer 1 — 工具分类（readonly 免审批 / write 需确认 / dangerous 强制拒绝）
+#   Layer 2 — 路径越权校验（file_path 参数必须在授权目录内）
+#   Layer 3 — 高危关键词拦截（shell 注入/删库等关键词拒绝）
+#
+# 所有可调阈值在下方 config 段，无需改 JS 代码。
+# 项目背景：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第四节 Phase 1
+
+- insert:
+    # ====================================================================
+    # 安全审批策略插件
+    # ====================================================================
+    - id: policy-legal-safety
+      name: '@law-agent/policy-legal-safety-bundle'
+      config:
+        # ----------------------------------------------------------------
+        # 工具分类表
+        #   readonly  — 只读工具，免审批直接放行
+        #   write     — 写入工具（生成文书等），需用户确认
+        #   dangerous — 高危工具（重建索引等），默认拒绝
+        #   未列出的工具按 unknownPolicy 处理
+        # ----------------------------------------------------------------
+        toolClassification:
+          # law-search 9 个工具
+          search_law:           readonly
+          search_case:          readonly
+          chroma_status:        readonly
+          evaluate_evidence:    readonly
+          search_external:      readonly
+          read_document:        readonly
+          review_contract:      readonly    # 审查不修改文件，但 Layer 2 额外校验路径
+          write_litigation:     write       # 生成文书 → 需用户确认
+          ingest_rebuild:       dangerous   # 重建索引 → 高危
+
+          # chinese-law 8 个工具（全部只读）
+          search_legislation:   readonly
+          get_provision:        readonly
+          list_sources:         readonly
+          validate_citation:    readonly
+          build_legal_stance:   readonly
+          format_citation:      readonly
+          check_currency:       readonly
+          about:                readonly
+
+          # filesystem 工具
+          read_file:            readonly
+          read_multiple_files:  readonly
+          list_directory:       readonly
+          directory_tree:       readonly
+          search_files:         readonly
+          get_file_info:        readonly
+          list_allowed_directories: readonly
+          write_file:           write
+          edit_file:            write
+          create_directory:     write
+          move_file:            write
+
+          # session-storage 6 个工具
+          sync_sessions_tool:   write       # 写入 SQLite，幂等
+          search_sessions:      readonly
+          get_session:          readonly
+          tag_session:          write       # 修改标签
+          export_session:       write       # 写文件到桌面
+          session_stats:        readonly
+
+        # ----------------------------------------------------------------
+        # 授权目录（Layer 2 路径越权校验白名单）
+        # 只有这些目录下的文件可以被 read_document / review_contract 访问
+        # ----------------------------------------------------------------
+        authorizedRoots:
+          - /Users/simon/Documents/1-Work
+          - /Users/simon/Documents/1-SLP/MCP/law-search/uploads
+          - /Users/simon/Documents/1-SLP/DSH WorkSpace/.dsh-uploads
+          - /Users/simon/Downloads
+
+        # ----------------------------------------------------------------
+        # 高危关键词（Layer 3 拦截）
+        # 工具调用参数的 JSON 序列化文本包含这些关键词时直接拒绝
+        # ----------------------------------------------------------------
+        blockedKeywords:
+          # Shell 注入
+          - 'rm -rf'
+          - 'rm -fr'
+          - 'format '
+          - 'mkfs'
+          - 'chmod 777'
+          - 'chmod -R'
+          - 'chown -R'
+          - 'drop table'
+          - 'drop database'
+          - 'curl | sh'
+          - 'wget | sh'
+          - 'bash -c'
+          # 数据破坏
+          - 'DELETE FROM'
+          - 'TRUNCATE TABLE'
+          # 密钥泄漏
+          - 'cat /etc/shadow'
+          - 'cat ~/.ssh'
+
+        # ----------------------------------------------------------------
+        # 未登记工具策略
+        #   allow   — 放行（宽松模式）
+        #   confirm — 需用户确认（默认，推荐）
+        #   deny    — 拒绝（严格模式）
+        # ----------------------------------------------------------------
+        unknownPolicy: confirm

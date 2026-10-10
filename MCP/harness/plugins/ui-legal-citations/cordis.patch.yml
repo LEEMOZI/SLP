@@ -1,0 +1,80 @@
+# @law-agent/ui-legal-citations cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本插件向 Cordis 注册法律 UI 组件：
+#   - 法条原文折叠卡片（Collapsible Law Article Cards）
+#   - 证据标记（Evidence Markers）
+#   - 引用跳转原文页（Citation Jump-to-Original）
+#   - 证据链时间轴（Evidence Chain Timeline）
+#
+# 设计文档：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第六节 扩展点 #9
+# 当前状态：骨架实现，完整功能待 DSH UI Plugin API 稳定后落地
+
+- insert:
+    # ====================================================================
+    # 法律 UI 组件注册
+    # ====================================================================
+    - id: ui-legal-citations
+      name: '@law-agent/ui-legal-citations'
+      config:
+        # ----------------------------------------------------------------
+        # 启用的 UI 组件
+        # ----------------------------------------------------------------
+        components:
+          # 法条原文折叠卡片
+          - name: law-article-card
+            enabled: true
+            description: '在回答中嵌入可折叠的法条原文卡片，点击展开查看完整法条'
+            # 触发条件：当回答中包含法条引用时显示
+            trigger: 'response_contains_citation'
+            # 样式配置
+            style:
+              collapsed: true          # 默认折叠
+              maxHeight: '200px'       # 展开后最大高度
+              showSource: true         # 显示法条来源
+              copyButton: true         # 显示复制按钮
+
+          # 证据标记
+          - name: evidence-marker
+            enabled: true
+            description: '在回答中用特殊标记高亮关键证据点'
+            trigger: 'always'
+            style:
+              highlightColor: '#fff3cd'  # 高亮背景色
+              icon: '⚖️'                # 证据图标
+              tooltip: true              # 悬停显示证据详情
+
+          # 引用跳转原文页
+          - name: citation-jump
+            enabled: true
+            description: '点击法条引用可跳转到原文页或打开原文弹窗'
+            trigger: 'response_contains_citation'
+            style:
+              jumpIcon: '📖'            # 跳转图标
+              openInNewTab: false       # 是否在新标签页打开
+              previewOnHover: true      # 悬停预览
+
+          # 证据链时间轴
+          - name: evidence-timeline
+            enabled: false             # 默认关闭，需要更多开发
+            description: '在回答末尾显示证据链时间轴，按时间顺序展示相关事件'
+            trigger: 'case_analysis'
+            style:
+              layout: 'horizontal'      # horizontal / vertical
+              showDates: true
+              collapsible: true
+
+        # ----------------------------------------------------------------
+        # 全局样式配置
+        # ----------------------------------------------------------------
+        globalStyle:
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+          fontSize: '14px'
+          lineHeight: '1.6'
+          primaryColor: '#1a73e8'       # 主色调
+          borderColor: '#e0e0e0'        # 边框色
+
+        # ----------------------------------------------------------------
+        # 日志级别
+        # ----------------------------------------------------------------
+        logLevel: warn

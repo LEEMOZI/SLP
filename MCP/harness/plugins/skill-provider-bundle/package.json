@@ -1,0 +1,16 @@
+{
+  "name": "@law-agent/skill-provider-bundle",
+  "version": "0.1.0",
+  "description": "[P1 Bundle] 法律领域技能注入层：向 DSH 运行时注入法律工具使用指南、法条引用格式规范、法律术语表，减少 LLM 幻觉并提升工具选择准确率。",
+  "private": true,
+  "main": "src/index.js",
+  "type": "module",
+  "files": ["cordis.patch.yml", "README.md", "src", "skills"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": ["deepseek-harness", "law-agent", "skill-provider", "legal-context", "cordis-plugin"],
+  "license": "MIT"
+}

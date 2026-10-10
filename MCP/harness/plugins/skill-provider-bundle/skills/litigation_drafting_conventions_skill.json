@@ -1,0 +1,17 @@
+{
+  "_comment": "诉讼文书起草规范：起诉状/答辩状/代理词的标准结构与写作要点，配合 write_litigation 工具使用。",
+  "skill_id": "litigation-drafting-conventions",
+  "skill_name": "诉讼文书起草规范",
+  "version": "0.1.0",
+  "dependencies": { "mcp_servers": ["law-search"], "model_provider": ["lm_studio_local", "deepseek_api"] },
+  "workflow_steps": [
+    { "step": 1, "action": "law-search.write_litigation", "args_map": { "doc_type": "{{doc_type}}", "case_facts": "{{case_facts}}" }, "output_key": "draft_doc" }
+  ],
+  "domain_knowledge": {
+    "起诉状结构": ["当事人信息（自然人/法人分列）", "诉讼请求（分项编号、金额明确）", "事实与理由（时间线+法律关系+请求权基础）", "证据清单", "致送法院与具状人"],
+    "答辩状结构": ["答辩人信息", "答辩请求（驳回全部/部分诉请）", "答辩理由（程序→事实→法律三层次）", "反诉提示（如有）"],
+    "代理词结构": ["代理权限说明", "争议焦点归纳", "逐焦点论证（法条+事实+证据三对应）", "结论性意见"],
+    "写作要点": ["请求权基础先行定位", "每项主张对应'法条+事实+证据'三要素", "金额计算列明公式", "避免情绪化措辞"]
+  },
+  "attach_to": ["lm_studio_workbench"]
+}

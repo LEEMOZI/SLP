@@ -1,0 +1,23 @@
+{
+  "name": "@law-agent/observability-bundle",
+  "version": "0.1.0",
+  "description": "[P2 Bundle] 可观测性插件。通过 ctx.on('tools/post-execute'/'llm/*/stream-end'/'session/event') 收集指标，支持 OTLP 兼容格式导出。追踪工具调用耗时、LLM 调用成本、检索命中率、会话事件等。",
+  "private": true,
+  "main": "src/metrics.js",
+  "files": ["cordis.patch.yml", "src/metrics.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "observability",
+    "metrics",
+    "otlp",
+    "cost-tracking",
+    "latency-monitoring"
+  ],
+  "license": "MIT"
+}

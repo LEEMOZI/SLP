@@ -1,0 +1,51 @@
+# Profile：LM Studio 工作台 增量补丁（用户层，最后写入优先）
+#
+# 工作台定位：法律检索 / 案例检索 / 合同审查 / 法律分析
+# 模型 Provider 由 DSH 原生 settings.yaml（Web Models 页）管理
+#
+# 安全策略：
+#   - 以只读工具为主（search_law / search_case / chroma_status 等）
+#   - review_contract 只读但涉及路径 → Layer 2 额外校验
+#   - write_litigation / ingest_rebuild 需用户确认或强制拒绝
+#   - 未登记工具需用户确认（unknownPolicy: confirm）
+#
+# 技能激活（P1 由 skill-provider-legal 插件实现，当前通过 system prompt 注入）：
+#   - law_search_skill: 中国法律综合检索与分析
+#   - contract_review_skill: 合同风险审查与条款改进
+
+- insert:
+    # ====================================================================
+    # 安全策略覆盖（本工作台级别）
+    # ====================================================================
+    - id: policy-legal-safety
+      config:
+        # LM Studio 工作台：以只读检索为主
+        # write_litigation 在此工作台较少使用（主要在 work-project）
+        # 但保留 write 分类，需用户确认
+        unknownPolicy: confirm
+
+        # 本工作台默认模型路由提示
+        # 实际路由由 DSH settings.yaml 管理，此处仅供展示
+        routingHint:
+          shortTasks: lm_studio_local     # < 8000 chars → 本地
+          longTasks: deepseek_api          # >= 8000 chars → 云端
+          internalGeneration: deepseek_api # pipeline 内部生成固定云端
+
+    # ====================================================================
+    # 技能动态激活（P1 skill-provider-legal 插件）
+    # ====================================================================
+    - id: skill-provider-legal
+      config:
+        skillsDir: /Users/simon/Documents/1-SLP/MCP/harness/skills
+        autoActivate:
+          - law-search-comprehensive
+          - contract-review
+        logLevel: warn
+
+    # ====================================================================
+    # 子代理注册（P1 subagent-legal-bundle 插件）
+    # ====================================================================
+    - id: subagent-legal
+      config:
+        parallelStrategy: eager
+        logLevel: warn

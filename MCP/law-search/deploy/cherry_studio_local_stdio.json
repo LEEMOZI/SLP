@@ -1,0 +1,24 @@
+{
+  "_comment": "Cherry Studio MCP 配置 — 本地 stdio 测试模式",
+  "_setup_instructions": [
+    "1. 在 Cherry Studio: 设置 → MCP 服务器 → 添加服务器",
+    "2. 类型选择 stdio",
+    "3. 命令: /Users/simon/Documents/1-SLP/venv/bin/python",
+    "4. 参数: [\"/Users/simon/Documents/1-SLP/MCP/law-search/server.py\"]",
+    "5. 环境变量: PYTHONUNBUFFERED=1, TOKENIZERS_PARALLELISM=false",
+    "6. 保存后启用，在助手中启用 law-search 工具"
+  ],
+  "mcpServers": {
+    "law-search": {
+      "type": "stdio",
+      "command": "/Users/simon/Documents/1-SLP/venv/bin/python",
+      "args": [
+        "/Users/simon/Documents/1-SLP/MCP/law-search/server.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "TOKENIZERS_PARALLELISM": "false"
+      }
+    }
+  }
+}

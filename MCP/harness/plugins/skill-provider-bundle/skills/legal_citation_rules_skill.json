@@ -1,0 +1,25 @@
+{
+  "_comment": "法条引用与时效规范：仅依据检索结果引用、标注时效性、条/款/项层级写法。",
+  "skill_id": "legal-citation-rules",
+  "skill_name": "法条引用与时效性规范",
+  "version": "0.1.0",
+  "dependencies": { "mcp_servers": ["law-search"], "model_provider": ["lm_studio_local", "deepseek_api"] },
+  "workflow_steps": [
+    { "step": 1, "action": "law-search.search_law", "args_map": { "question": "{{user_query}}", "top_k": 8 }, "output_key": "retrieval_results" }
+  ],
+  "domain_knowledge": {
+    "引用格式": {
+      "法条": "《法律名称》第X条；引用款/项：第X条第Y款第（Z）项",
+      "司法解释": "《司法解释全称》（法释〔年份〕X号）第X条",
+      "案例": "（案号）或 指导案例X号",
+      "行政法规": "《行政法规全称》（国务院令第X号）第X条"
+    },
+    "硬性要求": [
+      "所有引用必须来自检索结果原文，禁止凭记忆引用条号",
+      "引用时标注时效性：现行有效/已修正（注明修正年份）/已废止",
+      "检索结果未覆盖的问题，明确写'检索未见直接规定'，不得编造",
+      "新旧法冲突时标注适用依据（如民法典时间效力司法解释）"
+    ]
+  },
+  "attach_to": ["lm_studio_workbench"]
+}

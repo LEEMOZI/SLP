@@ -1,0 +1,14 @@
+{
+  "name": "@law-agent/law-search-dsh-bundle",
+  "version": "0.2.0",
+  "description": "[P0 Bundle] 法律检索 MCP 接入层：向 Profile 挂载 law-search（stdio）MCP server，提供 search_law / search_case / review_contract 等 7 个工具。零 JS：全部通过 in-box @deepseek-ai/dsh-mcp-client 行声明实现。",
+  "private": true,
+  "files": ["cordis.patch.yml", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": ["deepseek-harness", "law-agent", "legal-search", "mcp", "bundle"],
+  "license": "MIT"
+}

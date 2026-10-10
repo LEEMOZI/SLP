@@ -1,0 +1,16 @@
+# ~/.dsh/cordis.patch.yml —— Harness 全局级用户补丁层（应用于所有 Profile）
+#
+# DSH 补丁文件的合法格式：顶层 YAML 数组，每项一条 loader patch entry
+# （@deepseek-ai/cordis-plugin-include 的 PatchOptions）：
+#   - insert: [- id, name: <npm包>, config: {...}]   # 插入新行
+#   - { id: <已有行id>, config: {...} }              # 定向覆盖已有行 config
+# in-box 参考样例：DSH 源码 packages/bundle/base/cordis.patch.yml
+#
+# P0 策略：本层保持空数组 []。
+# law-agent 能力（MCP server / 安全策略）全部按 bundle 层挂载
+# （harness/plugins/*/cordis.patch.yml），只作用于在 package.json
+# `dsh.profile.bundles` 里声明了对应 bundle 的 Profile，
+# 避免污染 web/headless/tui 等内置 profile。
+# 模型 Provider（DeepSeek / LM Studio）由 DSH 原生 settings.yaml + Web Models 页管理。
+# 项目背景：MCP/HARNESS_PLUGIN_ARCHITECTURE.md
+[]

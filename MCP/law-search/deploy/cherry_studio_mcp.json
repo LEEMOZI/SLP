@@ -1,0 +1,26 @@
+{
+  "_comment": "Cherry Studio MCP 配置模板 — 远程 Mac Studio 部署版",
+  "_setup_instructions": [
+    "1. 将此文件内容导入 Cherry Studio: 设置 → MCP 服务器 → 导入 JSON",
+    "2. 替换 <StudioIP> 为 Mac Studio 的内网 IP 地址",
+    "3. 替换 <token> 为 run_cloud.sh 启动时生成的 Bearer Token",
+    "4. law-search 的 token 从 .secrets/cloud_auth_token 读取",
+    "5. session-storage 需要单独启动 http transport (端口 8766)"
+  ],
+  "mcpServers": {
+    "law-search": {
+      "type": "streamableHttp",
+      "url": "http://<StudioIP>:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
+    },
+    "session-storage": {
+      "type": "streamableHttp",
+      "url": "http://<StudioIP>:8766/mcp",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
+    }
+  }
+}

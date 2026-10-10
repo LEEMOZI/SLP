@@ -1,0 +1,14 @@
+{
+  "name": "@law-agent/session-storage-bundle",
+  "version": "0.1.0",
+  "description": "[P1 Bundle] 会话持久化层：将 DSH 对话历史保存到本地磁盘，支持会话恢复、历史检索、导出为文本。律师工作场景中保留完整的法律咨询记录。",
+  "private": true,
+  "files": ["cordis.patch.yml", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": ["deepseek-harness", "law-agent", "session-storage", "persistence", "cordis-plugin"],
+  "license": "MIT"
+}

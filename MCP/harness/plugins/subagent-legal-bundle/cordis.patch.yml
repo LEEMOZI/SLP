@@ -1,0 +1,125 @@
+# @law-agent/subagent-legal-bundle cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本 Bundle 向 Cordis 注册 3 个法律子代理：
+#   1. legal-retrieval — 检索子代理（search_law / search_case / search_external）
+#   2. contract-review — 审查子代理（review_contract / evaluate_evidence）
+#   3. litigation-drafting — 起草子代理（write_litigation / read_document）
+#
+# 每个子代理有独立的系统提示词、工具白名单和模型偏好。
+# 支持通过 ctx.subagents.register() 注册，实现 fork-in-process 并行执行。
+#
+# 设计文档：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第六节 扩展点 #7
+
+- insert:
+    # ====================================================================
+    # 法律子代理注册
+    # ====================================================================
+    - id: subagent-legal
+      name: '@law-agent/subagent-legal-bundle'
+      config:
+        # ----------------------------------------------------------------
+        # 子代理定义列表
+        # 每个子代理有 name / systemPrompt / allowedTools / modelHint
+        # ----------------------------------------------------------------
+        agents:
+
+          # ---- 1. 检索子代理 ----
+          - name: legal-retrieval
+            displayName: '法律检索代理'
+            description: '负责法条检索、案例检索、外部数据源查询。只读操作，可安全并行。'
+            systemPrompt: |
+              你是一个专业的法律检索代理。你的职责是：
+              1. 根据用户问题检索相关法条（search_law）
+              2. 检索相关案例（search_case）
+              3. 必要时查询外部数据源（search_external）
+              
+              工作原则：
+              - 优先使用本地知识库（law-search MCP server）
+              - 检索结果必须包含法条编号和原文
+              - 案例检索需注明案号和裁判日期
+              - 不要生成法律意见，只提供检索结果
+            allowedTools:
+              - search_law
+              - search_case
+              - search_external
+              - chroma_status
+            deniedTools:
+              - write_litigation
+              - ingest_rebuild
+              - review_contract
+            modelHint:
+              preferred: lm_studio_local       # 检索任务通常较短
+              fallback: deepseek_api
+            maxConcurrency: 3
+            timeoutSec: 120
+
+          # ---- 2. 审查子代理 ----
+          - name: contract-review
+            displayName: '合同审查代理'
+            description: '负责合同风险审查、条款分析、证据评估。涉及文件读取，需注意路径权限。'
+            systemPrompt: |
+              你是一个专业的合同审查代理。你的职责是：
+              1. 审查合同文件，识别风险条款（review_contract）
+              2. 评估证据材料的证明力（evaluate_evidence）
+              3. 生成风险清单和改进建议
+              
+              工作原则：
+              - 审查结果必须引用具体条款编号
+              - 风险等级分为：高/中/低
+              - 每个风险点附带改进建议
+              - 涉及路径的文件操作需在授权目录内
+            allowedTools:
+              - review_contract
+              - evaluate_evidence
+              - read_document
+              - search_law           # 审查时可能需要检索相关法条
+            deniedTools:
+              - write_litigation
+              - ingest_rebuild
+            modelHint:
+              preferred: deepseek_api        # 审查任务需要较强的分析能力
+              fallback: lm_studio_local
+            maxConcurrency: 2
+            timeoutSec: 300
+
+          # ---- 3. 起草子代理 ----
+          - name: litigation-drafting
+            displayName: '文书起草代理'
+            description: '负责起诉状/答辩状/代理词等法律文书的起草。写入操作，需用户确认。'
+            systemPrompt: |
+              你是一个专业的法律文书起草代理。你的职责是：
+              1. 根据案件事实和检索结果起草法律文书（write_litigation）
+              2. 阅读参考文档获取模板和格式要求（read_document）
+              3. 确保文书格式符合法院要求
+              
+              工作原则：
+              - 文书类型包括：起诉状、答辩状、代理词、上诉状
+              - 必须包含：当事人信息、诉讼请求、事实与理由、法律依据
+              - 引用法条必须准确，注明条款编号
+              - 生成文书后需经用户确认才能保存
+            allowedTools:
+              - write_litigation
+              - read_document
+              - search_law           # 起草时可能需要补充检索
+            deniedTools:
+              - ingest_rebuild
+              - review_contract
+            modelHint:
+              preferred: deepseek_api        # 起草任务需要较强的生成能力
+              fallback: lm_studio_local
+            maxConcurrency: 1                # 起草任务通常串行
+            timeoutSec: 600
+
+        # ----------------------------------------------------------------
+        # 并行执行策略
+        #   'eager'    — 尽可能并行（所有子代理同时启动）
+        #   'pipeline' — 流水线（检索 → 审查 → 起草，串行依赖）
+        #   'manual'   — 手动控制（由调用方决定并行策略）
+        # ----------------------------------------------------------------
+        parallelStrategy: eager
+
+        # ----------------------------------------------------------------
+        # 日志级别
+        # ----------------------------------------------------------------
+        logLevel: warn

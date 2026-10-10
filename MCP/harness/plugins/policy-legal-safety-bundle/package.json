@@ -1,0 +1,24 @@
+{
+  "name": "@law-agent/policy-legal-safety-bundle",
+  "version": "0.3.0",
+  "description": "[P0 Bundle] 法律安全审批策略插件。三层拦截：工具分类（readonly/write/dangerous）+ 路径越权校验 + 高危关键词拦截。所有配置通过 cordis.patch.yml 的 config 段传入，无需改代码。",
+  "private": true,
+  "main": "src/safety.js",
+  "files": ["cordis.patch.yml", "src/safety.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "approval-policy",
+    "legal-safety",
+    "cordis-plugin",
+    "tools-pre-execute",
+    "path-authorization",
+    "keyword-blocking"
+  ],
+  "license": "MIT"
+}

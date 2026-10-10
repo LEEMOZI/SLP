@@ -1,0 +1,19 @@
+# @law-agent/session-storage-bundle cordis.patch.yml
+#
+# 【架构说明 · 2026-09-02】
+# Cordis bundle 是纯声明式 patch 层（dsh-app-boot loadProfile 只合并本文件，
+# 不执行任何 JS 代码），且 DSH Desktop 的 @deepseek-ai/dsh-base 并无
+# session 存储配置服务——早期占位版里的 storageDir/maxSessions/autoSaveInterval
+# 参数从未真实生效。
+#
+# 会话持久化的真实实现 = 独立 Python MCP Server（纯本地，不联网）：
+#   MCP/session-storage/server.py   FastMCP 服务（6 个工具）
+#   MCP/session-storage/importer.py DSH 会话增量导入（zstd 解析 + 投影缓存元数据）
+#   MCP/session-storage/db.py       SQLite + FTS5 trigram + OS 级写锁
+#
+# 注册位置（MCP spawn 唯一通道）：
+#   Desktop: ~/Library/Application Support/dsh-desktop/harness/profiles/web/cordis.patch.yml
+#            → insert 列表 mcp-session-storage 条目
+#   LM Studio: mcp.json 手动添加 stdio 命令（见 bundle README）
+#
+# 本 bundle 保留为该子系统的文档锚点，不贡献运行时 patch。

@@ -1,0 +1,57 @@
+# @law-agent/agent-loop-legal cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本插件向 Cordis 注册一个自定义 Agent Loop，在 DSH 默认
+# plan → tool → re-plan → done 循环基础上，增加法律专用步骤：
+#   - 法条引用核对（Citation Verification）
+#   - 证据覆盖率检查（Evidence Coverage Check）
+#
+# 设计文档：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第六节 扩展点 #5
+# 当前状态：Python answer_guard 已实现核心逻辑，本插件提供 DSH 层编排入口
+
+- insert:
+    # ====================================================================
+    # 法律专用 Agent Loop
+    # ====================================================================
+    - id: agent-loop-legal
+      name: '@law-agent/agent-loop-legal'
+      config:
+        # ----------------------------------------------------------------
+        # 启用的额外步骤
+        # 这些步骤会在默认 Loop 的 re-plan 阶段插入执行
+        # ----------------------------------------------------------------
+        extraSteps:
+          # 法条引用核对
+          - name: citation-verification
+            enabled: true
+            description: '验证回答中引用的法条编号和原文是否与检索结果一致'
+            # 触发条件：当回答中包含法条引用时执行
+            trigger: 'response_contains_citation'
+            # 失败策略：warn（警告但不阻断）/ block（阻断并要求修正）
+            onFailure: warn
+            # 最大重试次数（onFailure=block 时生效）
+            maxRetries: 2
+
+          # 证据覆盖率检查
+          - name: evidence-coverage
+            enabled: true
+            description: '检查回答是否覆盖了检索到的关键证据点'
+            trigger: 'after_answer_generation'
+            onFailure: warn
+            # 覆盖率阈值（低于此值触发警告）
+            coverageThreshold: 0.6
+            # 最大重试次数
+            maxRetries: 1
+
+        # ----------------------------------------------------------------
+        # Loop 策略预设
+        #   'standard' — 标准法律检索（默认）
+        #   'thorough' — 深度审查（增加多轮覆盖率检查）
+        #   'quick'    — 快速回答（跳过覆盖率检查）
+        # ----------------------------------------------------------------
+        preset: standard
+
+        # ----------------------------------------------------------------
+        # 日志级别
+        # ----------------------------------------------------------------
+        logLevel: warn

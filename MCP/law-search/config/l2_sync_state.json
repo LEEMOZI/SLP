@@ -1,0 +1,998 @@
+{
+ "last_checked": "2026-10-05 08:30",
+ "history": [
+  {
+   "checked_at": "2026-09-02 22:07",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": null,
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "mentions_current": false,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-02 22:09",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-02 22:11",
+   "outdated": [
+    "民法典",
+    "民法典合同编通则司法解释",
+    "劳动法",
+    "企业破产法",
+    "证券法",
+    "公司法司法解释"
+   ],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": true,
+     "mentions_current": false,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": true,
+     "mentions_current": false,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2007-06-29"
+     ],
+     "mentions_repealed": true,
+     "mentions_current": true,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2019-03-28",
+      "2007-06-01"
+     ],
+     "mentions_repealed": true,
+     "mentions_current": false,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2025,
+     "official_effective_dates": [],
+     "mentions_repealed": true,
+     "mentions_current": true,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01",
+      "2021-03-01",
+      "2017-11-04"
+     ],
+     "mentions_repealed": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": true,
+     "mentions_current": false,
+     "verdict": "⛔ 官方源提及废止/失效，立即人工核对本地版本"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-02 22:14",
+   "outdated": [
+    "证券法"
+   ],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号（检索提及旧版废止，属新修订正常更替）"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2007-06-29"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2019-03-28",
+      "2007-06-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号（检索提及旧版废止，属新修订正常更替）"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2025,
+     "official_effective_dates": [],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "⚠️ 本地库可能过期：官方最新 2025 年修订，本地弱信号仅到 2023 年"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01",
+      "2021-03-01",
+      "2017-11-04"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-07 08:47",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2018,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "✅ 本地已有 ≥2022 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2026-03-20",
+      "2007-06-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2019,
+     "official_effective_dates": [
+      "2020-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2023 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01",
+      "2009-02-28",
+      "2006-06-29"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-14 08:30",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2008-01-01",
+      "2007-06-29"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2014-03-01",
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2007-06-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": true,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2019,
+     "official_effective_dates": [
+      "2020-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2023 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2009-02-28",
+      "2005-02-28",
+      "2002-12-28"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-21 08:30",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2026-03-20",
+      "2007-06-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": true,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2019,
+     "official_effective_dates": [
+      "2020-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2023 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-09-28 11:28",
+   "outdated": [
+    "企业破产法"
+   ],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": true,
+     "mentions_current": false,
+     "verdict": "✅ 检索结果仅提及旧版废止（正常更替），未见更新版本信号"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2013-07-01",
+      "2008-01-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "error": "Request timed out after 60 seconds.",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "verdict": "⚠️ 检查失败（Request timed out after 60 seconds.），需人工核对"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2019,
+     "official_effective_dates": [
+      "2020-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2023 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 本地源文件未见版本标注，官方最新 2023 年，建议人工核对"
+    }
+   ]
+  },
+  {
+   "checked_at": "2026-10-05 08:30",
+   "outdated": [],
+   "rows": [
+    {
+     "law": "公司法",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "新公司法 2023修订 现行有效 施行日期",
+     "official_latest_revision": 2023,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2025 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "民法典",
+     "local_max_version": 2025,
+     "local_version_signal": "weak",
+     "query": "中华人民共和国民法典 现行有效 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2021-01-01",
+      "2020-05-28",
+      "2017-10-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "民法典合同编通则司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "最高人民法院 民法典合同编通则司法解释 法释 现行有效 施行",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2023-12-05"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动法",
+     "local_max_version": 2022,
+     "local_version_signal": "weak",
+     "query": "劳动法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2013-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "劳动合同法",
+     "local_max_version": 2012,
+     "local_version_signal": "strong",
+     "query": "劳动合同法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "企业破产法",
+     "local_max_version": 2006,
+     "local_version_signal": "weak",
+     "query": "企业破产法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2007-06-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "证券法",
+     "local_max_version": 2023,
+     "local_version_signal": "weak",
+     "query": "证券法 现行有效 最新修订 施行日期",
+     "official_latest_revision": 2019,
+     "official_effective_dates": [
+      "2020-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "✅ 本地已有 ≥2023 年资料覆盖（文件名弱信号，建议抽查确认条文版本）"
+    },
+    {
+     "law": "刑法",
+     "local_max_version": 2021,
+     "local_version_signal": "weak",
+     "query": "刑法 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-03-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": false,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    },
+    {
+     "law": "公司法司法解释",
+     "local_max_version": null,
+     "local_version_signal": "none",
+     "query": "公司法司法解释 现行有效 最新修订 施行日期",
+     "official_latest_revision": null,
+     "official_effective_dates": [
+      "2024-07-01"
+     ],
+     "mentions_repealed": false,
+     "superseded_note": false,
+     "mentions_current": true,
+     "verdict": "❓ 未提取到明确版本信号，建议人工核对"
+    }
+   ]
+  }
+ ]
+}

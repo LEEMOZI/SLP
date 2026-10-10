@@ -1,0 +1,39 @@
+{
+  "_comment": "DeepSeek Harness Skill：合同审查技能包。挂载于 LM Studio 工作台。合同上传经 filesystem server（1-Work 与 law-search/uploads），审查由 law-search.review_contract 完成（提取文本 → 检索法条 → 风险清单 → 引用校验）。条款改写增强待 evaluate_evidence 工具落地后填充。",
+  "skill_id": "contract-review",
+  "skill_name": "合同风险审查与条款改进",
+  "version": "0.3.0",
+  "dependencies": {
+    "mcp_servers": ["law-search", "filesystem"],
+    "model_provider": ["deepseek_api", "lm_studio_local"],
+    "_planned_tools": ["evaluate_evidence"]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "action": "filesystem.list_directory",
+      "args_map": {
+        "path": "/Users/simon/Documents/1-Work"
+      },
+      "output_key": "uploaded_contract"
+    },
+    {
+      "step": 2,
+      "action": "law-search.review_contract",
+      "args_map": {
+        "file_path": "{{uploaded_contract.path}}",
+        "contract_type": "{{contract_type}}",
+        "focus_points": "{{focus_points}}"
+      },
+      "output_key": "review_report"
+    },
+    {
+      "step": 3,
+      "action": "compose_final_answer",
+      "input_from": ["review_report"],
+      "output_key": "final_answer"
+    }
+  ],
+  "status": "核心可用：review_contract 已实现（风险清单 + 引用校验）。条款改写增强待 evaluate_evidence 落地。",
+  "attach_to": ["lm_studio_workbench"]
+}

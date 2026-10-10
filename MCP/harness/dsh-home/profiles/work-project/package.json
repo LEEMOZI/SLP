@@ -1,0 +1,22 @@
+{
+  "name": "dsh-profile-work-project",
+  "private": true,
+  "description": "DSH Profile：Work Project（Bionic 工作台）。案卷材料分析 / 法律文书起草，优先 Bionic Secure Cloud；分工说明见 MCP/harness/profiles/work_project.json。",
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "@law-agent/law-search-dsh-bundle",
+        "@law-agent/llm-router-bundle",
+        "@law-agent/policy-legal-safety-bundle",
+        "@law-agent/skill-provider-legal",
+        "@law-agent/subagent-legal-bundle",
+        "@law-agent/agent-loop-legal",
+        "@law-agent/ui-legal-citations",
+        "@law-agent/observability-bundle",
+        "@law-agent/session-storage-fs"
+      ]
+    }
+  }
+}

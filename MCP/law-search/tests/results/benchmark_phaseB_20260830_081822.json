@@ -1,0 +1,380 @@
+{
+  "phase": "B_end2end",
+  "top_k": 8,
+  "cases": [
+    {
+      "id": "B1",
+      "category": "公司法",
+      "question": "有限责任公司股东出资不实应承担什么法律责任？设立时的其他股东是否承担连带责任？",
+      "time_s": 20.56,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1939,
+      "final_chars": 1810,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.5,
+      "evidence_kw_coverage": 0.75,
+      "answer_kw_coverage": 0.75,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第31条,第94条,第13条",
+          "source": "公司法600问（上）",
+          "page": "450"
+        },
+        {
+          "id": "C2",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第50条,第99条",
+          "source": "公司法600问（上）",
+          "page": "438"
+        },
+        {
+          "id": "C3",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第50条,第99条,第13条,第1条,第228条",
+          "source": "公司法600问（上）",
+          "page": "451"
+        },
+        {
+          "id": "C4",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第50条,第30条,第13条,第47条,第52条",
+          "source": "公司法600问（上）",
+          "page": "453"
+        },
+        {
+          "id": "C5",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第50条,第99条,第228条,第13条",
+          "source": "公司法600问（上）",
+          "page": "452"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 10.7,
+        "retrieve_embedding_s": 1.28,
+        "retrieve_chroma_s": 0.71,
+        "retrieve_candidates": 60.0,
+        "retrieve_rerank_s": 8.71,
+        "retrieve_total_s": 10.7,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 9.86
+      }
+    },
+    {
+      "id": "B2",
+      "category": "劳动法",
+      "question": "用人单位违法辞退员工，劳动者可以主张什么赔偿？",
+      "time_s": 100.14,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1534,
+      "final_chars": 1534,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.0,
+      "evidence_kw_coverage": 0.4,
+      "answer_kw_coverage": 0.6,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国民法典",
+          "article": "第一百五十七条",
+          "source": "公司法600问（上）",
+          "page": "240"
+        },
+        {
+          "id": "C2",
+          "type": "judicial",
+          "law": "中华人民共和国企业破产法",
+          "article": "第五十六条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "518"
+        },
+        {
+          "id": "C3",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第六十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "445"
+        },
+        {
+          "id": "C4",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "500"
+        },
+        {
+          "id": "C5",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "495"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 6.59,
+        "retrieve_embedding_s": 0.32,
+        "retrieve_chroma_s": 0.03,
+        "retrieve_candidates": 60.0,
+        "retrieve_rerank_s": 6.25,
+        "retrieve_total_s": 6.59,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 93.54
+      }
+    },
+    {
+      "id": "B3",
+      "category": "民法典婚姻",
+      "question": "夫妻一方在婚姻关系存续期间以个人名义超出家庭日常生活需要所负的债务，是否属于夫妻共同债务？",
+      "time_s": 20.81,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 718,
+      "final_chars": 718,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.0,
+      "evidence_kw_coverage": 0.2,
+      "answer_kw_coverage": 0.4,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第一千零六十二条",
+          "source": "公司法600问（上）",
+          "page": "77"
+        },
+        {
+          "id": "C2",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第28条",
+          "source": "公司法600问（上）",
+          "page": "180"
+        },
+        {
+          "id": "C3",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第1062条,第134条",
+          "source": "公司法600问（上）",
+          "page": "78"
+        },
+        {
+          "id": "C4",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第10条",
+          "source": "公司法600问（上）",
+          "page": "592"
+        },
+        {
+          "id": "C5",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第三十三条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "499"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 16.8,
+        "retrieve_embedding_s": 7.77,
+        "retrieve_chroma_s": 0.16,
+        "retrieve_candidates": 60.0,
+        "retrieve_rerank_s": 8.86,
+        "retrieve_total_s": 16.8,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 4.0
+      }
+    },
+    {
+      "id": "B4",
+      "category": "证券法",
+      "question": "内幕交易行为在证券法上应承担什么法律责任？",
+      "time_s": 96.16,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1265,
+      "final_chars": 1373,
+      "guard_passed": false,
+      "guard_warnings_count": 2,
+      "guard_warnings": [
+        "发现Evidence未支持观点:过错",
+        "发现Evidence未支持观点:举证责任"
+      ],
+      "guard_coverage": 0.0,
+      "evidence_kw_coverage": 0.6,
+      "answer_kw_coverage": 0.6,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国证券法",
+          "article": "第七十条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "256"
+        },
+        {
+          "id": "C2",
+          "type": "law",
+          "law": "中华人民共和国证券法",
+          "article": "第五十六条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "386"
+        },
+        {
+          "id": "C3",
+          "type": "law",
+          "law": "中华人民共和国证券法",
+          "article": "第五十五条,第一百八十四条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "197"
+        },
+        {
+          "id": "C4",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第四十八条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "384"
+        },
+        {
+          "id": "C5",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第六条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "243"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 7.28,
+        "retrieve_embedding_s": 0.51,
+        "retrieve_chroma_filtered": 0.0,
+        "retrieve_chroma_merged": 60.0,
+        "retrieve_chroma_s": 0.06,
+        "retrieve_candidates": 60.0,
+        "retrieve_rerank_s": 6.69,
+        "retrieve_total_s": 7.28,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 88.88
+      }
+    },
+    {
+      "id": "B5",
+      "category": "民法典总则",
+      "question": "向人民法院请求保护民事权利的诉讼时效期间是多久？有哪些特殊规定？",
+      "time_s": 119.14,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1889,
+      "final_chars": 1810,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.0,
+      "evidence_kw_coverage": 0.2,
+      "answer_kw_coverage": 0.2,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国公司法",
+          "article": "第七十四条",
+          "source": "最新公司法及司法解释汇编（2024）",
+          "page": "57"
+        },
+        {
+          "id": "C2",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第十九条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "496"
+        },
+        {
+          "id": "C3",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第七十四条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "521"
+        },
+        {
+          "id": "C4",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第一百四十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "521"
+        },
+        {
+          "id": "C5",
+          "type": "judicial",
+          "law": "最新公司法及司法解释",
+          "article": "第二十二条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "page": "76"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 18.56,
+        "retrieve_embedding_s": 8.75,
+        "retrieve_chroma_s": 0.22,
+        "retrieve_candidates": 60.0,
+        "retrieve_rerank_s": 9.57,
+        "retrieve_total_s": 18.55,
+        "phase2_fusion_s": 0.01,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 100.57
+      }
+    }
+  ],
+  "total_time_s": 356.82,
+  "aggregate": {
+    "guard_pass_rate": 0.8,
+    "avg_warnings": 0.4,
+    "avg_guard_coverage": 0.1,
+    "avg_ans_kw_cover": 0.51,
+    "avg_ev_kw_cover": 0.43,
+    "avg_time_s": 71.4
+  }
+}

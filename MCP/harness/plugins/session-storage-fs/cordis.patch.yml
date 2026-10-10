@@ -1,0 +1,60 @@
+# @law-agent/session-storage-fs cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+# 本插件向 Cordis 注册 StorageBackend，桥接 DSH 原生会话管理
+# 与现有 Python session-storage MCP 的 SQLite+FTS5 后端。
+#
+# 数据源：
+#   - DSH Desktop 会话文件：~/Library/Application Support/dsh-desktop/harness/sessions/
+#   - SQLite 数据库：MCP/session-storage/data/sessions.db
+#   - FTS5 全文索引：messages_fts 虚拟表（trigram tokenizer）
+#
+# 设计文档：MCP/HARNESS_PLUGIN_ARCHITECTURE.md 第六节 扩展点 #8
+
+- insert:
+    # ====================================================================
+    # 会话存储后端注册
+    # ====================================================================
+    - id: session-storage-fs
+      name: '@law-agent/session-storage-fs'
+      config:
+        # ----------------------------------------------------------------
+        # SQLite 数据库路径
+        # 与 Python session-storage MCP 共享同一个数据库
+        # ----------------------------------------------------------------
+        dbPath: /Users/simon/Documents/1-SLP/MCP/session-storage/data/sessions.db
+
+        # ----------------------------------------------------------------
+        # DSH 会话文件目录
+        # 扫描此目录下的 session.jsonl.zstd 文件进行增量导入
+        # ----------------------------------------------------------------
+        dshSessionsDir: ~/Library/Application Support/dsh-desktop/harness/sessions
+
+        # ----------------------------------------------------------------
+        # 自动同步配置
+        # ----------------------------------------------------------------
+        autoSync:
+          enabled: true              # 是否启用自动同步
+          intervalSec: 300           # 同步间隔（秒），默认 5 分钟
+          onStartup: true            # 启动时立即同步一次
+
+        # ----------------------------------------------------------------
+        # 导出配置
+        # ----------------------------------------------------------------
+        export:
+          defaultDir: ~/Desktop/dsh_sessions
+          format: markdown           # markdown / json
+
+        # ----------------------------------------------------------------
+        # 检索配置
+        # ----------------------------------------------------------------
+        search:
+          defaultLimit: 10           # 默认返回条数
+          minQueryLength: 2          # 最小查询长度（中文 ≥2 字）
+          enableFts: true            # 启用 FTS5 全文检索
+          enableLikeFallback: true   # FTS 无命中时降级 LIKE 模糊匹配
+
+        # ----------------------------------------------------------------
+        # 日志级别
+        # ----------------------------------------------------------------
+        logLevel: warn

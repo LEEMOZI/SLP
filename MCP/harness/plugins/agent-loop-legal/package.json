@@ -1,0 +1,22 @@
+{
+  "name": "@law-agent/agent-loop-legal",
+  "version": "0.1.0",
+  "description": "[P2 Plugin] 法律专用 Agent Loop 插件。通过 ctx.agent.loop 替换 DSH 默认思考-行动循环，增加法条引用核对和证据覆盖率检查两个专用步骤。当前 Python answer_guard 已实现核心逻辑，本插件在 DSH 层提供编排入口，为未来迁移做准备。",
+  "private": true,
+  "main": "src/loop.js",
+  "files": ["cordis.patch.yml", "src/loop.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "agent-loop",
+    "citation-verification",
+    "evidence-coverage",
+    "legal-reasoning"
+  ],
+  "license": "MIT"
+}

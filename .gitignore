@@ -1,0 +1,36 @@
+# ===== Python =====
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ===== 向量数据库与运行时产物（体积大 / 可重建） =====
+MCP/law-search/chroma/
+MCP/law-search/chroma_snapshots/
+MCP/law-search/file_hash_index.json
+MCP/law-search/kb_sync_state.json
+
+# ===== 密钥与凭据（绝不入库） =====
+MCP/law-search/.secrets/
+*.key
+.env
+.env.*
+
+# ===== 运行时会话数据（可能含客户沟通内容） =====
+MCP/session-storage/data/
+
+# ===== 日志 =====
+MCP/law-search/logs/
+*.log
+
+# ===== Node =====
+node_modules/
+
+# ===== macOS =====
+.DS_Store
+._*
+
+# ===== 编辑器 =====
+.vscode/
+.idea/

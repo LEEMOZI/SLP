@@ -1,0 +1,33 @@
+{
+  "_comment": "LM Studio 工作台 — 法律检索 / 案例检索 / 合同审查 / 法律分析。短任务走本地 Qwen（快、零成本），长任务经 auto 路由切 deepseek_api（8000 字阈值，见 model_router.routing_rules）。对应双工作台架构（2026-08-30）。",
+  "profile_name": "law-agent-lm-studio-workbench",
+  "bionic_project_mode": "LM Studio Desktop",
+  "workspace_root": "/Users/simon/Documents/1-Work",
+  "document_upload_path": "/Users/simon/Documents/0-AI/MCP/law-search/uploads",
+  "default_model_provider": "auto",
+  "fallback_model_provider": "deepseek_api",
+  "preferred_model_short": "Qwen3.5-4B-Instruct",
+  "preferred_model_long": "deepseek-v4-pro",
+  "preferred_model_reasoning": "deepseek-v4-pro",
+  "attach_mcp_servers": [
+    "law-search",
+    "filesystem"
+  ],
+  "enable_answer_guard": true,
+  "working_scenarios": [
+    "法律检索（法条定位 + 依据回答，search_law）",
+    "案例检索（待案例库语料扩充后启用）",
+    "合同审查（PDF/Word 上传 → 风险清单）",
+    "法律分析（研究报告 / 法律意见 / 案例分析）"
+  ],
+  "output_requirements": {
+    "citation_style": "lawyer_formatter",
+    "evidence_coverage_min": 0.8,
+    "attach_source_metadata": true
+  },
+  "trajectory_audit": {
+    "enabled": true,
+    "log_to_dsh": false,
+    "save_path": "/Users/simon/Documents/0-AI/MCP/law-search/logs/lm_studio_workbench_traces/"
+  }
+}

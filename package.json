@@ -1,0 +1,7 @@
+{
+  "name": "law-agent-harness",
+  "version": "0.3.0",
+  "private": true,
+  "description": "法律智能体项目根配置。DSH 已改用 Desktop 版（/Applications/AI/DSH Desktop.app），不再需要源码安装。",
+  "scripts": {}
+}

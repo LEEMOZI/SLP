@@ -1,0 +1,49 @@
+# Profile：Work Project（Bionic 工作台）增量补丁（用户层）
+#
+# 工作台定位：案卷材料分析 / 法律文书起草 / 证据评估
+# 模型 Provider：优先 Bionic Secure Cloud（未配置时回落 deepseek_api）
+#
+# 安全策略（比 lm-studio-workbench 更严格）：
+#   - write_litigation 强制用户确认（生成正式法律文书）
+#   - ingest_rebuild 强制拒绝（需显式 confirm=true）
+#   - review_contract 路径校验更严格（合同文件可能来自多个目录）
+#   - 未登记工具默认拒绝（unknownPolicy: deny）
+#
+# 技能激活（P1 由 skill-provider-legal 插件实现）：
+#   - litigation_drafting_skill: 法律文书起草
+#   - contract_review_skill: 合同风险审查
+
+- insert:
+    # ====================================================================
+    # 安全策略覆盖（本工作台更严格）
+    # ====================================================================
+    - id: policy-legal-safety
+      config:
+        # Work Project：涉及正式法律文书生成，安全策略更严格
+        # 未登记工具默认拒绝（防止模型调用未预期的工具）
+        unknownPolicy: deny
+
+        # 本工作台默认模型路由提示
+        routingHint:
+          preferred: bionic_secure_cloud   # 优先 Secure Cloud
+          fallback: deepseek_api           # 回落 DeepSeek
+          internalGeneration: deepseek_api # pipeline 内部生成固定云端
+
+    # ====================================================================
+    # 技能动态激活（P1 skill-provider-legal 插件）
+    # ====================================================================
+    - id: skill-provider-legal
+      config:
+        skillsDir: /Users/simon/Documents/1-SLP/MCP/harness/skills
+        autoActivate:
+          - litigation-drafting
+          - contract-review
+        logLevel: warn
+
+    # ====================================================================
+    # 子代理注册（P1 subagent-legal-bundle 插件）
+    # ====================================================================
+    - id: subagent-legal
+      config:
+        parallelStrategy: pipeline   # 工作项目更复杂，用流水线策略
+        logLevel: warn

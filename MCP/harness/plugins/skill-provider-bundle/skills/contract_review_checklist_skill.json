@@ -1,0 +1,19 @@
+{
+  "_comment": "合同审查聚焦清单：按合同类型给出必查条款与常见风险点，配合 review_contract 工具使用。",
+  "skill_id": "contract-review-checklist",
+  "skill_name": "合同审查聚焦清单",
+  "version": "0.1.0",
+  "dependencies": { "mcp_servers": ["law-search"], "model_provider": ["lm_studio_local", "deepseek_api"] },
+  "workflow_steps": [
+    { "step": 1, "action": "law-search.review_contract", "args_map": { "file_path": "{{file_path}}", "contract_type": "{{contract_type}}" }, "output_key": "review_report" }
+  ],
+  "domain_knowledge": {
+    "通用必查项": ["主体资格与签章", "权利义务对等性", "违约责任是否可执行", "争议解决条款（管辖/仲裁）", "通知与送达", "解除条件", "知识产权归属", "保密义务"],
+    "买卖合同": ["标的物交付与风险转移", "质量异议期", "所有权保留"],
+    "租赁合同": ["租期上限（不得超过20年）", "装饰装修处理", "优先承租权", "维修义务划分"],
+    "借款/担保合同": ["利率上限（LPR4倍）", "担保方式与登记要求", "保证期间约定"],
+    "劳动合同": ["试用期与合同期限匹配", "竞业限制（范围/期限/补偿）", "违约金法定情形"],
+    "股权转让合同": ["工商变更登记义务", "陈述与保证", "过渡期安排", "优先购买权"]
+  },
+  "attach_to": ["lm_studio_workbench"]
+}

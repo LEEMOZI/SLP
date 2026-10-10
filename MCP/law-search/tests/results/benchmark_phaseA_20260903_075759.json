@@ -1,0 +1,463 @@
+{
+  "phase": "A_retrieval",
+  "top_k": 8,
+  "cases": [
+    {
+      "id": "A1",
+      "category": "民法典",
+      "question": "民法典关于诉讼时效的规定",
+      "time_s": 97.54,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 7,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 6.2452,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "含民法典",
+          "article": "第一百八十八条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释]",
+          "rerank_score": 7.1425,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "中国民法典",
+          "article": "第193条,第3条,第2247条,第22",
+          "source": "中国民法典释评·总则编",
+          "rerank_score": 6.5189,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "含民法典",
+          "article": "第一百八十八条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释]",
+          "rerank_score": 6.2688,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "最高人民法院关",
+          "article": "第一百八十八条",
+          "source": "最高人民法院关于印发《全国法院贯彻实施民法典工作会议纪要》的通知_2021.04.06生效_20210427下载",
+          "rerank_score": 6.1494,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中国民法典",
+          "article": "第三条,第193条",
+          "source": "中国民法典释义与案例评注：总则编",
+          "rerank_score": 6.1049,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "category": "民法典",
+      "question": "合同解除权的行使期限",
+      "time_s": 19.98,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 8,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 7.2443,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "5-民法典合同编 理解与适用 一",
+          "article": "",
+          "source": "5-民法典合同编 理解与适用 一",
+          "rerank_score": 9.3615,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "中国民法典",
+          "article": "",
+          "source": "中国民法典释义与案例评注：合同编（上）",
+          "rerank_score": 7.697,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国合同法",
+          "article": "第九十五条",
+          "source": "中华人民共和国合同法释义",
+          "rerank_score": 7.6095,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "民法典释评·合同编·通则",
+          "article": "第95条,第199条,第192条",
+          "source": "民法典释评·合同编·通则",
+          "rerank_score": 6.8707,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中国民法典",
+          "article": "",
+          "source": "中国民法典释义与案例评注：合同编（上） (中国民法典释义与案例评注：合同编（上）.pdf)",
+          "rerank_score": 6.7419,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "category": "民法典",
+      "question": "夫妻共同债务的认定标准",
+      "time_s": 19.41,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 8,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 6.3533,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "10-民法典婚姻家庭编继承编 理解与适用",
+          "article": "第1064条",
+          "source": "10-民法典婚姻家庭编继承编 理解与适用",
+          "rerank_score": 6.7861,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "婚姻案件审判疑难问题汇总",
+          "article": "第二十四条",
+          "source": "婚姻案件审判疑难问题汇总 (婚姻案件审判疑难问题汇总.doc)",
+          "rerank_score": 6.6448,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中国民法典",
+          "article": "第一千零六十四条",
+          "source": "中国民法典释义与案例评注：婚姻家庭编 (中国民法典释义与案例评注：婚姻家庭编.pdf)",
+          "rerank_score": 6.6431,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "10-民法典婚姻家庭编继承编 理解与适用",
+          "article": "第24条",
+          "source": "10-民法典婚姻家庭编继承编 理解与适用 (10-民法典婚姻家庭编继承编 理解与适用.pdf)",
+          "rerank_score": 6.3569,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中国民法典",
+          "article": "第四十一条",
+          "source": "中国民法典释义与案例评注：婚姻家庭编 (中国民法典释义与案例评注：婚姻家庭编.pdf)",
+          "rerank_score": 6.3048,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "category": "公司法",
+      "question": "股东出资不实的连带责任",
+      "time_s": 21.32,
+      "retrieved": 8,
+      "candidates": 70.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 8,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 6.4495,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "公司法600问",
+          "article": "第31条,第94条,第13条",
+          "source": "公司法600问（上）",
+          "rerank_score": 7.0139,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "最新公司法及司法解释",
+          "article": "第五十条",
+          "source": "最新公司法及司法解释汇编（2024） (最新公司法及司法解释汇编（2024）.pdf)",
+          "rerank_score": 6.7427,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "2024 公司法理解与适用 上",
+          "article": "第五十条",
+          "source": "2024 公司法理解与适用 上",
+          "rerank_score": 6.6657,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "2024 公司法理解与适用 上",
+          "article": "第五十条",
+          "source": "2024 公司法理解与适用 上",
+          "rerank_score": 6.6088,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "2024 公司法理解与适用 上",
+          "article": "",
+          "source": "2024 公司法理解与适用 上",
+          "rerank_score": 6.3408,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "category": "公司法",
+      "question": "股东会决议无效与可撤销的情形",
+      "time_s": 20.15,
+      "retrieved": 8,
+      "candidates": 67.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 7,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 5.8542,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "2024 公司法理解与适用 上",
+          "article": "第二十六条",
+          "source": "2024 公司法理解与适用 上",
+          "rerank_score": 6.1895,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "公司法评注",
+          "article": "第26条,第25条",
+          "source": "公司法评注（李建伟） (公司法评注（李建伟）.pdf)",
+          "rerank_score": 5.9865,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "广东高院民营企业法律风险防范手册2.0版",
+          "article": "",
+          "source": "广东高院民营企业法律风险防范手册2.0版",
+          "rerank_score": 5.8782,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "2024 公司法理解与适用 上",
+          "article": "第212条",
+          "source": "2024 公司法理解与适用 上",
+          "rerank_score": 5.8572,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "公司法修改条文理解与适用",
+          "article": "第二十七条,第22条,第5条,第59条",
+          "source": "公司法修改条文理解与适用（曹守晔）",
+          "rerank_score": 5.8486,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "category": "刑法",
+      "question": "刑事责任年龄的法律规定",
+      "time_s": 18.37,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 5,
+      "law_hint_match_count": 4,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 3.6484,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "1-民法典总则编 理解与适用 上",
+          "article": "第34条",
+          "source": "1-民法典总则编 理解与适用 上",
+          "rerank_score": 5.0883,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "1-民法典总则编 理解与适用 上",
+          "article": "第17条",
+          "source": "1-民法典总则编 理解与适用 上 (1-民法典总则编 理解与适用 上.pdf)",
+          "rerank_score": 4.1794,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国刑法",
+          "article": "第十七条",
+          "source": "中华人民共和国刑法修正案（十一）_2021.03.01生效_20210101下载",
+          "rerank_score": 4.136,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "1-民法典总则编 理解与适用 上",
+          "article": "第49条",
+          "source": "1-民法典总则编 理解与适用 上",
+          "rerank_score": 3.7724,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国国家赔偿法",
+          "article": "第十四条",
+          "source": "中华人民共和国国家赔偿法 (中华人民共和国国家赔偿法.doc)",
+          "rerank_score": 3.5202,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A7",
+      "category": "劳动法",
+      "question": "试用期最长可以约定多久？",
+      "time_s": 15.7,
+      "retrieved": 8,
+      "candidates": 60.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 5,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 5.3882,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "《现行劳动法律法规汇编》",
+          "article": "第二十一条",
+          "source": "《现行劳动法律法规汇编》 (《现行劳动法律法规汇编》.pdf)",
+          "rerank_score": 6.9989,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "史上最全面的HR法律最新工作手册",
+          "article": "第二十一条",
+          "source": "史上最全面的HR法律最新工作手册（560页） (史上最全面的HR法律最新工作手册（560页）.pdf)",
+          "rerank_score": 5.6782,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "中华人民共和国劳动法",
+          "article": "第二十一条",
+          "source": "中华人民共和国劳动法（1994）_已被修订_20220331下载 (中华人民共和国劳动法（1994）_已被修订_2022",
+          "rerank_score": 5.6782,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "《现行劳动法律法规汇编》",
+          "article": "第二十一条",
+          "source": "《现行劳动法律法规汇编》 (《现行劳动法律法规汇编》.pdf)",
+          "rerank_score": 5.6782,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "中华人民共和国劳动法",
+          "article": "第二十一条",
+          "source": "中华人民共和国劳动法 (中华人民共和国劳动法.doc)",
+          "rerank_score": 5.6782,
+          "authority": 50.0
+        }
+      ]
+    },
+    {
+      "id": "A8",
+      "category": "劳动法",
+      "question": "违法解除劳动合同的赔偿金计算",
+      "time_s": 10.54,
+      "retrieved": 8,
+      "candidates": 57.0,
+      "relevant_count_in_topk": 8,
+      "law_hint_match_count": 4,
+      "recall_hit_at_1": true,
+      "recall_hit_at_3": true,
+      "avg_authority": 50.0,
+      "avg_rerank_score": 6.0677,
+      "top_hits": [
+        {
+          "rank": 1,
+          "law_name": "企业合规用工与应对法律",
+          "article": "第二百零四条",
+          "source": "企业合规用工与应对法律",
+          "rerank_score": 6.9466,
+          "authority": 50.0
+        },
+        {
+          "rank": 2,
+          "law_name": "企业合规用工与应对法律",
+          "article": "第47条",
+          "source": "企业合规用工与应对法律",
+          "rerank_score": 6.8869,
+          "authority": 50.0
+        },
+        {
+          "rank": 3,
+          "law_name": "《现行劳动法律法规汇编》",
+          "article": "第三十条",
+          "source": "《现行劳动法律法规汇编》",
+          "rerank_score": 6.3298,
+          "authority": 50.0
+        },
+        {
+          "rank": 4,
+          "law_name": "【不再执行】北京市高级人民法院、北京市劳动争议仲裁委员会关于劳动争议案件法律适用",
+          "article": "第二十五条",
+          "source": "【不再执行】北京市高级人民法院、北京市劳动争议仲裁委员会关于劳动争议案件法律适用问题研讨会会议纪要",
+          "rerank_score": 5.8175,
+          "authority": 50.0
+        },
+        {
+          "rank": 5,
+          "law_name": "企业合规用工与应对法律",
+          "article": "第三十条",
+          "source": "企业合规用工与应对法律",
+          "rerank_score": 5.7558,
+          "authority": 50.0
+        }
+      ]
+    }
+  ],
+  "total_time_s": 223.01,
+  "aggregate": {
+    "Hit@1_rate": 1.0,
+    "Hit@3_rate": 1.0,
+    "avg_relevant_per_query": 7.62,
+    "avg_lawhint_match_per_query": 6.38,
+    "avg_authority": 50.0,
+    "avg_time_per_query_s": 27.88
+  }
+}

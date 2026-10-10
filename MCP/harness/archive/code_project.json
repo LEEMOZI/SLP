@@ -1,0 +1,31 @@
+{
+  "_comment": "LM Studio Bionic — Code Project 工作界面配置。场景：系统开发/代码调试/缺陷修复/知识库脚本开发。对应 PROJECT_STATUS.md 第 10.2 节映射表。",
+  "profile_name": "law-agent-code-dev",
+  "bionic_project_mode": "Code Project",
+  "workspace_root": "/Users/simon/Documents/0-AI",
+  "default_model_provider": "lm_studio_local",
+  "preferred_model": "Qwen3.5-4B-Instruct",
+  "attach_mcp_servers": [
+    "law-search",
+    "filesystem"
+  ],
+  "context_include": [
+    "PROJECT_STATUS.md",
+    "MCP/law-search/config/*.py",
+    "MCP/law-search/server.py",
+    "MCP/law-search/ingest.py",
+    "MCP/law-search/core/*.py"
+  ],
+  "working_scenarios": [
+    "修改 server.py / ingest.py / core/*.py 代码",
+    "调试 Chroma / 向量库 / 模型加载",
+    "编写与运行 ingest 参数验证",
+    "升级 config/* 配置",
+    "新增 MCP tool 函数（@mcp.tool 装饰器）"
+  ],
+  "trajectory_audit": {
+    "enabled": true,
+    "log_to_dsh": true,
+    "save_path": "/Users/simon/Documents/0-AI/MCP/law-search/logs/bionic_code_traces/"
+  }
+}

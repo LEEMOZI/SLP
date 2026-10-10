@@ -1,0 +1,49 @@
+{
+  "_comment": "DeepSeek Harness Skill：法律检索技能包。挂载于 LM Studio 工作台（法律检索/案例检索）。search_law 工具内部已封装 evidence fusion + answer guard，工作界面用户无需手动分步。",
+  "skill_id": "law-search-comprehensive",
+  "skill_name": "中国法律综合检索与分析",
+  "version": "0.2.0",
+  "dependencies": {
+    "mcp_servers": ["law-search"],
+    "model_provider": ["lm_studio_local", "deepseek_api"]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "action": "law-search.search_law",
+      "args_map": {
+        "question": "{{user_query}}",
+        "top_k": 8
+      },
+      "output_key": "retrieval_results"
+    },
+    {
+      "step": 2,
+      "action": "evidence_fusion_and_rank",
+      "input_from": "retrieval_results",
+      "output_key": "fused_evidences"
+    },
+    {
+      "step": 3,
+      "action": "llm_generate",
+      "input_from": "fused_evidences",
+      "system_prompt_ref": "config/prompt_config.py:LEGAL_SYSTEM_PROMPT",
+      "output_key": "draft_answer"
+    },
+    {
+      "step": 4,
+      "action": "answer_guard.check_answer",
+      "input_from": ["draft_answer", "fused_evidences"],
+      "output_key": "guard_warnings"
+    },
+    {
+      "step": 5,
+      "action": "compose_final_answer",
+      "input_from": ["draft_answer", "guard_warnings"],
+      "output_key": "final_answer"
+    }
+  ],
+  "attach_to": [
+    "lm_studio_workbench"
+  ]
+}

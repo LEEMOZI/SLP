@@ -1,0 +1,24 @@
+{
+  "name": "@law-agent/subagent-legal-bundle",
+  "version": "0.1.0",
+  "description": "[P1 Bundle] 法律子代理并行执行插件。注册 3 个专用子代理（检索/审查/起草），通过 ctx.subagents.register() 实现 fork-in-process 并行执行。每个子代理有独立的系统提示词、工具白名单和模型偏好。",
+  "private": true,
+  "main": "src/subagents.js",
+  "files": ["cordis.patch.yml", "src/subagents.js", "README.md"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "law-agent",
+    "subagent",
+    "parallel-execution",
+    "fork-in-process",
+    "legal-retrieval",
+    "contract-review",
+    "litigation-drafting"
+  ],
+  "license": "MIT"
+}

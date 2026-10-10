@@ -1,0 +1,129 @@
+# @law-agent/llm-router-bundle cordis.patch.yml
+#
+# DSH 补丁合法格式：顶层 YAML 数组（loader patch entries）。
+#
+# 设计决策（P0）：
+#   模型 Provider 的实际路由由 DSH 原生机制管理：
+#     - settings.yaml（Web Models 页可视化编辑）
+#     - in-box LLM adapter 行（dsh-llm-deepseek / dsh-llm-openai-compatible）
+#   Python 侧 core/llm_client.py 的 4-Provider 路由继续服务 MCP server 内部
+#   pipeline（search_law 生成等），与 DSH 会话层互不干扰。
+#
+# 本 patch 的作用：
+#   向 DSH Cordis 声明本项目的 LLM Provider 配置元数据，
+#   让 DSH Web UI 的 Models 面板能展示可用的 Provider 列表和路由规则。
+#   实际的 Provider 注册仍由 DSH 原生 settings.yaml 管理。
+#
+# P1 计划：实现自定义 Cordis 插件，通过 ctx.llm.registerAdapter() 注册
+#   per-task 路由适配器（按 prompt 长度 + 任务类型自动选 Provider）。
+#
+# 唯一真相源：MCP/harness/model_router.json（该文件是 config/llm_config.py 的镜像）
+
+# ── 1. DeepSeek API（云端主力）── override 已有 llm-deepseek 行的 config ──
+# 注意：dsh-base 已 insert 了 id: llm-deepseek，此处必须用 override 格式
+# （顶层 id + config，不包 insert），否则 composeEntries 会产生重复 ID。
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek'
+  config:
+    providerId: deepseek_api
+    displayName: 'DeepSeek V4 API 云端推理'
+    baseUrl: 'https://api.deepseek.com'
+    apiKeyEnv: 'DEEPSEEK_API_KEY'
+    defaultModel: 'deepseek-v4-flash'
+    longContextModel: 'deepseek-v4-pro'
+    reasoningModel: 'deepseek-v4-pro'
+    capabilities:
+      maxContextTokens: 1000000
+      maxOutputTokens: 384000
+      toolCalls: true
+      streaming: true
+      structuredOutput: true
+      thinking: true
+    thinkingByModel:
+      deepseek-v4-flash: false
+      deepseek-v4-pro: true
+    reasoningEffortByModel:
+      deepseek-v4-flash: 'low'
+      deepseek-v4-pro: 'high'
+    timeoutSec: 600
+    useFor:
+      - contract_review_long
+      - litigation_writing
+      - evidence_evaluation
+      - research_report
+      - legal_opinion
+      - case_analysis
+      - complex_legal_analysis
+      - long_document_review
+      - lm_studio_workbench_long
+
+- insert:
+    # ====================================================================
+    # 2. LM Studio 本地推理（短任务 + fallback）
+    # ====================================================================
+    - id: llm-lmstudio
+      name: '@deepseek-ai/dsh-llm-openai-compatible'
+      config:
+        providerId: lm_studio_local
+        displayName: 'LM Studio 本地推理'
+        baseUrl: 'http://localhost:1234/v1'
+        apiKey: 'lm-studio'
+        defaultModel: 'qwen/qwen3.8-27b'
+        compatibleModels:
+          - 'qwen/qwen3.8-27b'
+          - 'google/gemma-4-31b-qat'
+          - 'prism-ml/bonsai-27b'
+          - 'meta/muse-glimmer'
+        capabilities:
+          maxContextTokens: 32768
+          toolCalls: true
+          streaming: true
+        enableThinking: false
+        timeoutSec: 600
+        useFor:
+          - short_legal_search
+          - simple_legal_question
+          - local_debug
+          - lm_studio_workbench_short
+          - code_refactor
+          - bionic_code_project_default
+
+    # ====================================================================
+    # 3. Bionic Secure Cloud（预留 — 需配置 BIONIC_SC_API_KEY）
+    # ====================================================================
+    # - id: llm-bionic-sc
+    #   name: '@deepseek-ai/dsh-llm-openai-compatible'
+    #   config:
+    #     providerId: bionic_secure_cloud
+    #     displayName: 'LM Studio Bionic Secure Cloud'
+    #     baseUrl: 'https://api.lmstudio.ai/secure-cloud/v1'
+    #     apiKeyEnv: 'BIONIC_SC_API_KEY'
+    #     defaultModel: 'frontier-model-auto'
+    #     capabilities:
+    #       maxContextTokens: 131072
+    #       toolCalls: true
+    #       streaming: true
+    #     timeoutSec: 600
+    #     useFor:
+    #       - bionic_work_project_premium
+    #       - sensitive_data_on_prem
+
+    # ====================================================================
+    # 4. LM Link 远程推理（预留 — 需配置 LM_LINK_API_KEY）
+    # ====================================================================
+    # - id: llm-lmlink
+    #   name: '@deepseek-ai/dsh-llm-openai-compatible'
+    #   config:
+    #     providerId: lm_link
+    #     displayName: 'LM Studio LM Link 远程推理设备'
+    #     baseUrl: 'https://link.lmstudio.ai/v1'
+    #     apiKeyEnv: 'LM_LINK_API_KEY'
+    #     defaultModel: 'remote-device-default'
+    #     capabilities:
+    #       maxContextTokens: 131072
+    #       toolCalls: true
+    #       streaming: true
+    #     timeoutSec: 600
+    #     useFor:
+    #       - remote_gpu_inference
+    #       - cross_device_sharing

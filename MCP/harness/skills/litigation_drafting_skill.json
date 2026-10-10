@@ -1,0 +1,38 @@
+{
+  "_comment": "DeepSeek Harness Skill：法律文书起草技能包。挂载于 Bionic 工作台（Secure Cloud 云端模型），面向案卷材料分析成果生成起诉状/答辩状/代理词。write_litigation 工具已实现（检索法条 → 模板生成 → 引用校验）。",
+  "skill_id": "litigation-drafting",
+  "skill_name": "法律文书起草（起诉状/答辩状/代理词）",
+  "version": "0.2.0",
+  "dependencies": {
+    "mcp_servers": ["law-search"],
+    "model_provider": ["lm_studio_bionic_secure_cloud", "deepseek_api"]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "action": "case_file_analysis",
+      "input_from": "uploaded_case_files",
+      "output_key": "case_summary"
+    },
+    {
+      "step": 2,
+      "action": "law-search.write_litigation",
+      "args_map": {
+        "doc_type": "{{doc_type}}",
+        "case_facts": "{{case_summary.facts}}",
+        "parties": "{{case_summary.parties}}",
+        "claims": "{{case_summary.claims}}",
+        "court": "{{case_summary.court}}"
+      },
+      "output_key": "draft_document"
+    },
+    {
+      "step": 3,
+      "action": "compose_final_answer",
+      "input_from": ["draft_document"],
+      "output_key": "final_answer"
+    }
+  ],
+  "status": "可用（依赖 BIONIC_SC_API_KEY 配置后走 Secure Cloud；未配置时自动回落 deepseek_api）。step1 案卷材料分析依赖 Bionic 文档上传能力。",
+  "attach_to": ["bionic_work_project"]
+}

@@ -1,0 +1,306 @@
+libraries:
+
+
+# =====================================================
+# 01 法律法规库
+# =====================================================
+
+  law_library:
+
+    enabled: true
+
+    type: law
+
+    priority: 10
+
+
+    tags:
+
+      - 法律法规
+      - 司法解释
+      - 部门规章
+      - 监管规则
+      - 新规速递
+
+
+
+    sources:
+
+
+      # 本地法规库
+
+      - path: "/Users/simon/Desktop/Laws&Rules"
+
+        source_type: local
+
+        priority: 10
+
+
+
+      # 工作文件中的法律法规
+
+      - path: "/Users/simon/Documents/1-Work/1-2 法律法规"
+
+        source_type: local
+
+        priority: 10
+
+
+
+      # 公众号监管新规整理
+
+      - path: "/Users/simon/Documents/1-Work/1-1 公众号/02-资管律动/02-律动/01-新规速览"
+
+        source_type: local
+
+        priority: 20
+
+
+      # =====================================================
+      # 原 professional_library 并入（2026-09-02 审计决策：
+      # 无独立检索工具消费，与 law_library 同质，靠 doc_type
+      # 标签区分——评注/讲座/行研以低 authority 自然沉底）
+      # 注意：刻意排除 07-合同模板（归 contract_library，防重复入库）
+      # =====================================================
+
+      # 律所培训讲座（中银大讲堂等，实务观点）
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/01-会议论坛"
+
+        source_type: local
+
+        priority: 20
+
+
+      # 律所内部业务指引（无当事人信息）
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/01-业务指引"
+
+        source_type: local
+
+        priority: 20
+
+
+      # 学习材料/行研报告（非法律内容占比较高，低权重）
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/02-学习材料"
+
+        source_type: local
+
+        priority: 30
+
+
+      # 专题公开政策法规汇编
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/03-问题研究"
+
+        source_type: local
+
+        priority: 20
+
+
+      # 散文件：普法/讲座材料
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/新未保法，“未”你而来-北师大四附中-针对学生(1).docx"
+
+        source_type: local
+
+        priority: 30
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/幼儿园、中小学、医院、体育馆常见法律纠纷及应对策略.pptx"
+
+        source_type: local
+
+        priority: 30
+
+
+
+    description: |
+
+      中国法律法规、
+
+      司法解释、
+
+      部门规章、
+
+      监管规则、
+
+      法律汇编资料
+
+
+
+
+
+# =====================================================
+# 02 案例库
+# =====================================================
+
+
+  case_library:
+
+
+    enabled: true
+
+    type: case
+
+    priority: 20
+
+
+
+    tags:
+
+      - 裁判文书
+
+      - 案例分析
+
+      - 争议解决
+
+      - 判例研究
+
+
+
+    sources:
+
+
+      # 公开案例语料（文件级原位引用，2026-08-30 新增）
+      # ⚠️ 1-5 工作资料（03-争议解决/02-非诉/01-常法）含客户案件敏感信息（当事人姓名、
+      # 底稿、往来函件），禁止作为案例语料源——检索池若混入客户材料将违反保密义务。
+      # 若需 ingest 特定文书，请显式加文件级 source 并确认内容可公开。
+      # 注：「判决书中的公司法」（唐青林）与「上交所并购重组典型案例」为图片扫描版 PDF
+      # （无文本层，pypdf 仅产出垃圾 chunks），需 OCR 后方可入库，暂不列入 sources。
+
+      - path: "/Users/simon/Desktop/Laws&Rules/民法典/最高人民法院指导性案例全集（截止至2024年5月30日第40批）.docx"
+
+        source_type: local
+
+        priority: 5
+
+
+
+    description: |
+
+      裁判文书、
+
+      案例分析、
+
+      争议解决资料
+
+
+
+
+
+# =====================================================
+# 03 合同模板库（预留：未来存放法律文件模板）
+# =====================================================
+
+
+  contract_library:
+
+
+    enabled: true
+
+    type: contract
+
+    priority: 30
+
+
+
+    tags:
+
+      - 合同模板
+      - 合同审查
+      - 非诉文件
+      - 法律文书
+
+
+
+    sources:
+
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/07-合同模板"
+
+        source_type: local
+
+        priority: 10
+
+
+      # 散文件：战配投资法律意见书模板
+
+      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/战配投资法律意见书 - 模板v2.docx"
+
+        source_type: local
+
+        priority: 20
+
+
+      # ⚠️ 保密铁律（2026-09-02）：以下源已移除——
+      # 01-常法业务 / 02-非诉业务 / 03-争议解决 含客户合同审查文件与案卷材料，
+      # 属客户保密材料，禁止进入任何检索库。
+      # 律师工作文件的入库路径：目录分拣到「01-文书模板与工作底稿」白名单区后，
+      # 由 ingest.py 保密守卫（CONFIDENTIAL_ALLOW_SUBDIRS）放行。
+      # 模板类文件仅从 07-合同模板（自建范本）进入本库。
+
+
+
+    description: |
+
+      合同模板、
+
+      合同审查资料、
+
+      非诉法律文件
+
+
+
+
+
+# =====================================================
+# 04 证据库 —— 已删除（2026-09-02 知识库审计）
+# =====================================================
+#
+# evidence_library 审计结论：案卷/证据材料属客户保密信息，
+# 永不进入检索库（deny-by-default 铁律），空库无保留价值。
+# 替代方案：会话内按需读取——evaluate_evidence / write_litigation
+# 以文件路径参数现场读取进 context，用完即弃，不落任何持久层。
+# 客户材料禁区由 ingest.py 保密守卫（CONFIDENTIAL_DENY_ROOTS）强制执行。
+# 空 Chroma collection 已同步删除。
+#
+# =====================================================
+# 05 专业知识库 —— 已合并（2026-09-02 知识库审计）
+# =====================================================
+#
+# professional_library 审计结论：无独立检索工具消费，
+# 与 law_library 语料同质（评注/讲座/行研靠 doc_type 标签区分即可），
+# 已并入 law_library sources（显式列举 01-会议论坛 / 01-业务指引 /
+# 02-学习材料 / 03-问题研究，刻意排除 07-合同模板防重复入库）。
+# 空 Chroma collection 已同步删除。
+#
+# =====================================================
+# 06 研究资料库 —— 已删除（2026-09-02 知识库审计）
+# =====================================================
+#
+# research_library 审计结论：无检索工具消费，且原定源
+# （1-8 知识库）实为个人笔记（LLM-WIKI / SimonsNotes），
+# 与"学术论文/行业报告"定位不符。
+# 真实的行业报告语料（02-学习材料/006-行研报告）已随
+# professional_library 并入 law_library（低 authority 沉底）。
+# 空 Chroma collection 已同步删除。
+# =====================================================
+
+
+
+
+# =====================================================
+# NAS 示例（暂不启用）
+# =====================================================
+#
+# 未来连接 NAS 后，例如：
+#
+#  - path: "/Volumes/NAS/LawLibrary"
+#
+#    source_type: nas
+#
+#    priority: 30
+#
+# 不需要修改 ingest.py
+#
