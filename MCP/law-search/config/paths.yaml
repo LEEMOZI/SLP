@@ -39,7 +39,7 @@ libraries:
 
       # 工作文件中的法律法规
 
-      - path: "/Users/simon/Documents/1-Work/1-2 法律法规"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-2 法律法规"
 
         source_type: local
 
@@ -49,7 +49,7 @@ libraries:
 
       # 公众号监管新规整理
 
-      - path: "/Users/simon/Documents/1-Work/1-1 公众号/02-资管律动/02-律动/01-新规速览"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-1 公众号/02-资管律动/02-律动/01-新规速览"
 
         source_type: local
 
@@ -65,7 +65,7 @@ libraries:
 
       # 律所培训讲座（中银大讲堂等，实务观点）
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/01-会议论坛"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/01-会议论坛"
 
         source_type: local
 
@@ -74,7 +74,7 @@ libraries:
 
       # 律所内部业务指引（无当事人信息）
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/01-业务指引"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/01-业务指引"
 
         source_type: local
 
@@ -83,7 +83,7 @@ libraries:
 
       # 学习材料/行研报告（非法律内容占比较高，低权重）
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/02-学习材料"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/02-学习材料"
 
         source_type: local
 
@@ -92,7 +92,7 @@ libraries:
 
       # 专题公开政策法规汇编
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/03-问题研究"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/03-问题研究"
 
         source_type: local
 
@@ -101,13 +101,13 @@ libraries:
 
       # 散文件：普法/讲座材料
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/新未保法，“未”你而来-北师大四附中-针对学生(1).docx"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/新未保法，“未”你而来-北师大四附中-针对学生(1).docx"
 
         source_type: local
 
         priority: 30
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/幼儿园、中小学、医院、体育馆常见法律纠纷及应对策略.pptx"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/幼儿园、中小学、医院、体育馆常见法律纠纷及应对策略.pptx"
 
         source_type: local
 
@@ -217,7 +217,7 @@ libraries:
     sources:
 
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/07-合同模板"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/07-合同模板"
 
         source_type: local
 
@@ -226,7 +226,7 @@ libraries:
 
       # 散文件：战配投资法律意见书模板
 
-      - path: "/Users/simon/Documents/1-Work/1-3 专业研究/战配投资法律意见书 - 模板v2.docx"
+      - path: "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-3 专业研究/战配投资法律意见书 - 模板v2.docx"
 
         source_type: local
 

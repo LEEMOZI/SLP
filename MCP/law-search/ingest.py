@@ -1086,6 +1086,8 @@ def read_document(path):
 
 CONFIDENTIAL_DENY_ROOTS = [
     "/Users/simon/Documents/1-Work/1-5 工作资料",
+    # NAS 坚果云同步副本（MAC Studio 经 SMB 挂载，1-5 目录名无空格）
+    "/Volumes/sata11-138XXXX2122/Simon/坚果云文件备份/坚果云-lishitao@zhongyinlawyer.com/1-Work (1)/1-5工作资料",
 ]
 
 CONFIDENTIAL_ALLOW_SUBDIRS = [
