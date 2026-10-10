@@ -71,7 +71,10 @@
     "law-search-cloud": {
       "_status": "Streamable HTTP + Bearer Token 鉴权已实现 ✅ — 启动方式：bash run_cloud.sh --transport http --host 0.0.0.0（默认 http + 自动生成 token）。支持参数：--transport sse/http、--host、--port、--auth-token（固定或 auto）、--auth-token-file。客户端请求须携带 Authorization: Bearer <token>。工具能力与 law-search（stdio）完全一致。远程客户端（DSH/Cherry Studio/WorkBuddy/Bionic）通过 http://<StudioIP>:8765/mcp 连接。",
       "transport": "streamable-http",
-      "url": "http://127.0.0.1:8765/mcp",
+      "url": "http://100.66.217.64:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer abcd1234ef"
+      },
       "capabilities": {
         "tools": ["search_law", "search_case", "chroma_status", "ingest_rebuild", "write_litigation", "review_contract", "evaluate_evidence", "search_external", "read_document"]
       },

@@ -58,12 +58,22 @@ bash MCP/law-search/run_cloud.sh --host 0.0.0.0
 
 适用于两台机器在同一局域网，或已通过 Tailscale 组网。
 
-**MacBook 上无需运行任何服务**，只需在各客户端软件中配置连接到 MAC Studio。
+**Tailscale 组网已就绪（2026-10-10）**，三台设备同账号（leemozi@）在线：
 
-| 服务 | MAC Studio 地址 | 说明 |
-|------|----------------|------|
-| LM Studio API | `http://<StudioIP>:1234/v1` | 本地大模型推理 |
-| law-search-cloud | `http://<StudioIP>:8765/mcp` | 法律检索 MCP（需 Bearer Token） |
+| 设备 | Tailscale IP |
+|------|-------------|
+| **MAC Studio**（本机） | `100.66.217.64` |
+| MacBook Pro | `100.110.118.113` |
+| iPhone | `100.84.151.14` |
+
+**MacBook/iPhone 客户端最终连接地址**（无论在家还是在外都通用）：
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| LM Studio API | `http://100.66.217.64:1234/v1` | 本地大模型推理 |
+| law-search-cloud | `http://100.66.217.64:8765/mcp` | 法律检索 MCP（需 Bearer Token） |
+
+> 已实测：Tailscale IP 下 LM Studio 200 ✅ / law-search-cloud 401 鉴权正常 ✅
 
 ### 方案 B：SSH 隧道（加密，跨互联网推荐）
 

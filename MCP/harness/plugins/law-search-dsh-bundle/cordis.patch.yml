@@ -96,11 +96,15 @@
     #            '/Users/simon/Documents/1-SLP/MCP/law-search/uploads']
 
     # ====================================================================
-    # 6. law-search-cloud（SSE）按需启用
+    # 6. law-search-cloud（远程，Tailscale IP — MacBook/本机通用）
+    #    本机 stdio 版（entry 1）仅在 MAC Studio 可用；MacBook 上
+    #    安装时注释掉 entry 1，仅保留此远程条目。
     # ====================================================================
-    # - id: mcp-law-search-cloud
-    #   name: '@deepseek-ai/dsh-mcp-client'
-    #   config:
-    #     serverName: law-search-cloud
-    #     transport: streamable-http
-    #     url: http://127.0.0.1:8765/mcp
+    - id: mcp-law-search-cloud
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: law-search-cloud
+        transport: streamable-http
+        url: http://100.66.217.64:8765/mcp
+        headers:
+          Authorization: 'Bearer abcd1234ef'
