@@ -61,7 +61,7 @@ def check_semantic_replacement(answer):
 # 第五十三条
 #
 # 中文数字和阿拉伯数字均允许。
-LAW_REFERENCE_PATTERN = r"第\s*[0-9一二三四五六七八九十百千万亿]+\s*条"
+LAW_REFERENCE_PATTERN = r"第\s*[0-9零一二三四五六七八九十百千万亿]+\s*条"
 
 
 # ============================================================
@@ -108,9 +108,10 @@ FORBIDDEN_INFERENCE = [
     "可以认为",
     "应当理解为",
     "推定",
-    "当然",
     "必然",
     "通常情况下",
+    # 「当然」已移除：法律文本中多为正常连词（如「当然债务人」），
+    # 2026-10-11 基准测试证实其误报（B3 夫妻共同债务题）。
 ]
 
 
@@ -296,7 +297,107 @@ def extract_article_references(answer):
 
 # ============================================================
 # 13. 法条引用检查
+#
+# 注意：答案与证据中法条号可能混用中文数字/阿拉伯数字
+# （如「第四十九条」vs「第49条」），匹配前必须归一化。
 # ============================================================
+
+_CN_DIGIT = {
+    "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+    "六": 6, "七": 7, "八": 8, "九": 9,
+}
+
+
+def _cn_num_to_int(text):
+
+    """中文数字转整数，支持到「万亿」级；解析失败返回 None。"""
+
+    if not text:
+
+        return None
+
+    # 纯阿拉伯数字直接返回
+    if re.fullmatch(r"[0-9]+", text):
+
+        return int(text)
+
+    total = 0
+    section = 0          # 当前「万/亿」段内的累计值
+    number = 0           # 段内正在累积的系数
+
+    for ch in text:
+
+        if ch in _CN_DIGIT:
+
+            number = _CN_DIGIT[ch]
+
+        elif ch == "十":
+
+            # 「十」无前置系数时视为 1（如「第十条」「第十五条」）
+            section += (number or 1) * 10
+            number = 0
+
+        elif ch == "百":
+
+            section += (number or 1) * 100
+            number = 0
+
+        elif ch == "千":
+
+            section += (number or 1) * 1000
+            number = 0
+
+        elif ch == "万":
+
+            section = (section + number) * 10000
+            total += section
+            section, number = 0, 0
+
+        elif ch == "亿":
+
+            section = (section + number) * 100000000
+            total += section
+            section, number = 0, 0
+
+        else:
+
+            return None
+
+    result = total + section + number
+
+    return result if result > 0 else None
+
+
+def normalize_article_form(article):
+
+    """将「第X条」统一为阿拉伯数字形式（第四十九条 → 第49条）。"""
+
+    m = re.fullmatch(
+        r"第\s*([0-9零一二三四五六七八九十百千万亿]+)\s*条",
+        str(article or "").strip(),
+    )
+
+    if not m:
+
+        return str(article or "").strip()
+
+    n = _cn_num_to_int(m.group(1))
+
+    return f"第{n}条" if n is not None else m.group(0)
+
+
+def normalize_article_forms_in_text(text):
+
+    """把文本中所有「第X条」统一为阿拉伯数字形式（供证据文本归一化）。"""
+
+    return re.sub(
+        r"第\s*([0-9零一二三四五六七八九十百千万亿]+)\s*条",
+        lambda m: f"第{_cn_num_to_int(m.group(1))}条"
+        if _cn_num_to_int(m.group(1)) is not None
+        else m.group(0),
+        str(text or ""),
+    )
+
 
 def check_article_reference(answer, evidence_text):
 
@@ -306,7 +407,7 @@ def check_article_reference(answer, evidence_text):
     evidence_text = normalize_evidence_text(evidence_text)
 
     normalized_evidence = (
-        evidence_text
+        normalize_article_forms_in_text(evidence_text)
         .replace(" ", "")
         .replace("\n", "")
         .replace("\t", "")
@@ -316,10 +417,7 @@ def check_article_reference(answer, evidence_text):
 
     for article in articles:
 
-        normalized_article = (
-            article
-            .replace(" ", "")
-        )
+        normalized_article = normalize_article_form(article)
 
         if normalized_article not in normalized_evidence:
 
@@ -939,7 +1037,18 @@ def check_answer(
             f"（诚实拒答）{w}" for w in warnings
         ] or ["（诚实拒答）LLM 明确声明不了解该问题，属于安全输出。"]
     else:
-        passed_flag = len(warnings) == 0
+        # ----------------------------------------------------
+        # 严重度分级（2026-10-11 Guard 调优）：
+        #   硬警告 → 幻觉/无据引用类，一票否决 passed
+        #   「观点无据」→ 术语级检查（举证责任/善意/过错等），
+        #     法律论述的正常术语使用常被字面匹配误伤
+        #     （如证据用「谁主张谁举证」表述，答案写「举证责任」），
+        #     降级为提示性警告：保留展示，不参与 passed 判定。
+        # ----------------------------------------------------
+        hard_warnings = [
+            w for w in warnings if not w.startswith("观点无据:")
+        ]
+        passed_flag = len(hard_warnings) == 0
         coverage_report = coverage if isinstance(coverage, (int, float)) else None
         warning_report = list(warnings)
 
