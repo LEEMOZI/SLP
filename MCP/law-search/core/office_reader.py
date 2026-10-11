@@ -98,9 +98,10 @@ def _read_pptx(path: str) -> Tuple[str, Dict[str, Any]]:
                     cells = [c.text.strip() for c in row.cells if c.text.strip()]
                     if cells:
                         texts.append(" | ".join(cells))
-        # 演讲者备注
+        # 演讲者备注（部分幻灯片的 notes_text_frame 可能为 None）
         if slide.has_notes_slide:
-            notes = slide.notes_slide.notes_text_frame.text.strip()
+            notes_tf = slide.notes_slide.notes_text_frame
+            notes = notes_tf.text.strip() if notes_tf is not None else ""
             if notes:
                 texts.append(f"[备注] {notes}")
         if texts:
