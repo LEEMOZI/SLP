@@ -29,6 +29,11 @@ mcp = FastMCP("judgment-search")
 _zctx = zstandard.ZstdDecompressor()
 logger = None  # 由 _setup_logging 赋值
 
+# 高频保护阈值：2018 实测 183 万命中的全库 bm25+JOIN 拖到 49 秒，
+# 单次 rowid 探针仅需 ~18ms，据探针结果分三档：
+RANK_WINDOW = 20000     # 命中 ≤2万：全库 bm25 精确排序
+RANK_HARD_CAP = 200000  # 2万<命中≤20万：前 2 万候选内 bm25；>20万：入库序兜底
+
 
 def _setup_logging():
     global logger
@@ -143,6 +148,7 @@ def search_judgment(
     per_db = max(limit, 20)  # 每库取多一些再合并排序
 
     results, searched = [], 0
+    rank_notes = []  # 未做全库相关性排序的年份（高频保护触发记录）
     for db_path in _available_dbs():
         year = int(re.search(r"(\d{4})", db_path.stem).group(1))
         if year_from and year < year_from:
@@ -153,28 +159,54 @@ def search_judgment(
         con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         con.row_factory = sqlite3.Row
         try:
-            sql = ("SELECT d.id, d.ah, d.ajmc, d.fy, d.ssdq, d.ajlx, d.slcx, d.cprq,"
-                   " d.ay, d.nr_len, d.nr_zst"
-                   " FROM docs_fts f JOIN docs d ON d.id = f.rowid"
-                   " WHERE docs_fts MATCH ?")
-            params = [expr]
+            # 结构化过滤条件（三档排序模式共用）
+            conds, filter_params = [], []
             if date_from:
-                sql += " AND d.cprq >= ?"
-                params.append(date_from)
+                conds.append("d.cprq >= ?")
+                filter_params.append(date_from)
             if date_to:
-                sql += " AND d.cprq <= ?"
-                params.append(date_to)
+                conds.append("d.cprq <= ?")
+                filter_params.append(date_to)
             if courts:
-                sql += " AND (" + " OR ".join("d.fy LIKE ?" for _ in courts) + ")"
-                params += [f"%{c}%" for c in courts]
+                conds.append("(" + " OR ".join("d.fy LIKE ?" for _ in courts) + ")")
+                filter_params += [f"%{c}%" for c in courts]
             if causes:
-                sql += " AND (" + " OR ".join("d.ay LIKE ?" for _ in causes) + ")"
-                params += [f"%{c}%" for c in causes]
+                conds.append("(" + " OR ".join("d.ay LIKE ?" for _ in causes) + ")")
+                filter_params += [f"%{c}%" for c in causes]
             if case_type:
-                sql += " AND d.ajlx LIKE ?"
-                params.append(f"%{case_type}%")
-            sql += " ORDER BY bm25(docs_fts) LIMIT ?"
-            params.append(per_db)
+                conds.append("d.ajlx LIKE ?")
+                filter_params.append(f"%{case_type}%")
+            where_rest = (" AND " + " AND ".join(conds)) if conds else ""
+
+            # 单次探针判定命中规模（LIMIT 截断，极端高频也仅毫秒级）
+            n_probe = con.execute(
+                "SELECT COUNT(*) FROM (SELECT rowid FROM docs_fts"
+                " WHERE docs_fts MATCH ? LIMIT ?)",
+                (expr, RANK_HARD_CAP + 1)).fetchone()[0]
+
+            cols = ("d.id, d.ah, d.ajmc, d.fy, d.ssdq, d.ajlx, d.slcx, d.cprq,"
+                    " d.ay, d.nr_len, d.nr_zst")
+            if n_probe <= RANK_WINDOW:
+                # 低/中频：全库 bm25 精确排序
+                sql = (f"SELECT {cols} FROM docs_fts f JOIN docs d ON d.id = f.rowid"
+                       f" WHERE docs_fts MATCH ?{where_rest}"
+                       " ORDER BY bm25(docs_fts) LIMIT ?")
+                params = [expr, *filter_params, per_db]
+            elif n_probe <= RANK_HARD_CAP:
+                # 中高频：前 2 万候选内 bm25（避免全量打分+JOIN 取 BLOB 拖到分钟级）
+                sql = (f"SELECT {cols} FROM (SELECT rowid AS rid, bm25(docs_fts) AS s"
+                       f" FROM docs_fts WHERE docs_fts MATCH ? LIMIT {RANK_WINDOW})"
+                       f" t JOIN docs d ON d.id = t.rid{where_rest}"
+                       " ORDER BY t.s LIMIT ?")
+                params = [expr, *filter_params, per_db]
+                rank_notes.append(f"{year}(前{RANK_WINDOW}条内排序)")
+            else:
+                # 极端高频：入库序≈时间序兜底，毫秒级返回
+                sql = (f"SELECT {cols} FROM docs_fts f JOIN docs d ON d.id = f.rowid"
+                       f" WHERE docs_fts MATCH ?{where_rest}"
+                       " ORDER BY f.rowid LIMIT ?")
+                params = [expr, *filter_params, per_db]
+                rank_notes.append(f"{year}(按入库序)")
 
             terms = [w for w in re.split(r"\s+", query.strip()) if w]
             for r in con.execute(sql, params):
@@ -212,6 +244,9 @@ def search_judgment(
         "note": "用 get_judgment(db, rowid) 取全文；用 export_judgment(db, rowid) 导出全文并返回 URL",
         "results": results[:limit],
     }
+    if rank_notes:
+        out["rank_note"] = ("高频保护，以下年份未做全库相关性排序 → " + "、".join(rank_notes)
+                            + "；建议添加过滤条件或使用更精确关键词")
     logger.info("search_judgment | %r | %s hits | %.3fs", query, len(results[:limit]), elapsed)
     return json.dumps(out, ensure_ascii=False, indent=2)
 

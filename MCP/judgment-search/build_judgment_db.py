@@ -121,7 +121,7 @@ def build_year(zip_path: Path, db_path: Path, rebuild: bool = False) -> dict:
     except sqlite3.DatabaseError:
         pass
 
-    total, dup, t0 = 0, 0, time.time()
+    total, dup, empty, t0 = 0, 0, 0, time.time()
     buf = []
 
     def flush():
@@ -156,6 +156,7 @@ def build_year(zip_path: Path, db_path: Path, rebuild: bool = False) -> dict:
                     get = lambda k: clean(row[cols[k]])[:FIELD_CAP] if 0 <= cols[k] < len(row) else ""
                     nr = clean(row[cols["全文"]]) if 0 <= cols["全文"] < len(row) else ""
                     if not nr:
+                        empty += 1  # 空全文：不计入入库数（2018 实测约 7% 行为空）
                         continue
                     nr = nr[:FULLTEXT_CAP]
                     md5_hex = hashlib.md5(nr.encode()).hexdigest()
@@ -186,19 +187,20 @@ def build_year(zip_path: Path, db_path: Path, rebuild: bool = False) -> dict:
                     if len(buf) >= BATCH:
                         flush()
                         elapsed = time.time() - t0
-                        print(f"[{year}] {total} 行 | 入库 {total - dup} | 重复 {dup} | "
-                              f"{elapsed:.0f}s | {total / elapsed:.0f} 行/s", flush=True)
+                        print(f"[{year}] {total} 行 | 入库 {total - dup - empty} | 重复 {dup} | "
+                              f"空全文 {empty} | {elapsed:.0f}s | {total / elapsed:.0f} 行/s", flush=True)
         flush()
 
-    con.execute("INSERT OR REPLACE INTO progress VALUES('done', ?)", (str(total - dup),))
+    con.execute("INSERT OR REPLACE INTO progress VALUES('done', ?)", (str(total - dup - empty),))
     con.commit()
     # WAL checkpoint（避免 VACUUM：大库上耗时数小时，不值得）
     con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     size_gb = db_path.stat().st_size / 1e9
     con.close()
     elapsed = time.time() - t0
-    stats = {"year": year, "status": "built", "docs": total - dup, "dups": dup,
-             "size_gb": round(size_gb, 2), "elapsed_min": round(elapsed / 60, 1)}
+    stats = {"year": year, "status": "built", "docs": total - dup - empty, "dups": dup,
+             "empty": empty, "size_gb": round(size_gb, 2),
+             "elapsed_min": round(elapsed / 60, 1)}
     print(f"✅ [{year}] 完成: {stats}", flush=True)
     return stats
 
