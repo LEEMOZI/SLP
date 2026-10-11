@@ -740,6 +740,46 @@ class LegalRetriever:
 
     def search_cases(self, query: str, top_k: int = 8):
         """检索指导性案例/案例语料。返回 (items, timing)，不做法条字段补全。"""
+        return self._search_plain_collection(
+            self.case_collection, query, top_k, log_tag="CaseHit",
+        )
+
+    # ------------------------------------------------------------------
+    # 工具书/业务指引检索（reference_library：业务指南、操作指引等），
+    # 链路与案例检索相同：embed → Chroma → rerank → 归一，不做法条补全
+    # ------------------------------------------------------------------
+
+    _reference_collection: Optional[Any] = None
+
+    @property
+    def reference_collection(self):
+        if self._reference_collection is None:
+            if self._chroma_client is None:
+                logger.info("Chroma init: path=%s", self.chroma_path)
+                self._chroma_client = chromadb.PersistentClient(path=self.chroma_path)
+            t0 = time.perf_counter()
+            self._reference_collection = self._chroma_client.get_collection(
+                "reference_library"
+            )
+            logger.info(
+                "Chroma ready: collection=reference_library chunks=%s (%.2fs)",
+                self._reference_collection.count(), time.perf_counter() - t0,
+            )
+        return self._reference_collection
+
+    def search_reference(self, query: str, top_k: int = 8):
+        """检索工具书/业务学习/操作指引语料。返回 (items, timing)。"""
+        return self._search_plain_collection(
+            self.reference_collection, query, top_k, log_tag="RefHit",
+        )
+
+    def _search_plain_collection(
+        self, collection: Any, query: str, top_k: int, log_tag: str = "Hit",
+    ):
+        """通用向量检索链路（案例/工具书等非法条库共用）：embed → query → rerank。
+
+        返回 (items, timing)；不跑法条字段补全（metadata 非法条结构）。
+        """
         overall = time.perf_counter()
         timing: Dict[str, Any] = {}
         q = (query or "").strip()
@@ -751,10 +791,10 @@ class LegalRetriever:
         q_vec = self.embed_query(q)
         timing["embed_s"] = time.perf_counter() - t0
 
-        # 2. Chroma 语义查询（open，无 where——case 库不用法条 where 语义）
+        # 2. Chroma 语义查询（open，无 where——非法条库不用法条 where 语义）
         t0 = time.perf_counter()
         candidate_count = min(INITIAL_CANDIDATES, max(top_k * 4, 30))
-        res = self.case_collection.query(
+        res = collection.query(
             query_embeddings=[q_vec],
             n_results=candidate_count,
             include=["documents", "metadatas", "distances"],
@@ -786,8 +826,8 @@ class LegalRetriever:
         sel_metas = [m for _s, _d, m, _dd in ranked]
         sel_dists = [dd for _s, _d, _m, dd in ranked]
 
-        # 5. Schema 归一（跳过 _enrich_evidence_fields：案例 metadata 非法条结构，
-        #    误跑法条补全会把案例标题错判成 law_name）
+        # 5. Schema 归一（跳过 _enrich_evidence_fields：非法条 metadata 结构，
+        #    误跑法条补全会把标题错判成 law_name）
         chroma_format = {
             "documents": [sel_docs],
             "metadatas": [sel_metas],
@@ -798,7 +838,8 @@ class LegalRetriever:
 
         for idx, item in enumerate(items):
             logger.info(
-                "CaseHit %2d | rerank=%.4f | %s",
+                "%s %2d | rerank=%.4f | %s",
+                log_tag,
                 idx + 1, item.get("rerank_score", 0) or 0,
                 (item.get("title") or item.get("document_title") or "未知")[:50],
             )

@@ -506,6 +506,69 @@ async def search_case(question: str, top_k: int = 6) -> str:
 
 
 # ---------------------------------------------------------------------------
+# search_reference：工具书/业务学习/操作指引检索（reference_library）——独立库
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+async def search_reference(question: str, top_k: int = 6) -> str:
+    """检索本地工具书、业务学习材料与操作指引/办案指南（Chroma 向量库 reference_library）。
+
+    ## 🔴 调用条件（不满足严禁调用）
+    - 仅限用户询问律所业务操作流程、办案指引、合规操作、业务学习内容，
+      或明确提出"操作指引""业务指引""办案指南""学习材料""工具书" 等关键词时调用；
+    - 问法条依据用 search_law，找判例用 search_case，本工具只覆盖业务学习/指引类语料。
+
+    ## 🔴 次数约束
+    - 每个用户问题最多调用【1 次】，严禁换关键词反复重试；
+    - 与其他检索工具合计，累计工具调用不得超过 3 次（到 3 次强制停）。
+    """
+    started = time.perf_counter()
+    clean_question = (question or "").strip()
+    if not clean_question:
+        return "查询内容为空。请提供需要检索的业务问题或关键词。"
+
+    try:
+        from core.retrieval_service import get_retriever
+
+        items, _timing = await asyncio.to_thread(
+            get_retriever().search_reference, clean_question, top_k=max(1, min(top_k, 20)),
+        )
+        if not items:
+            return (
+                "本地工具书/业务指引库暂未检索到与该问题相关的内容。"
+                "可尝试调整关键词，或改用 search_law 检索法条依据。"
+            )
+
+        lines = [f"共检索到 {len(items)} 条相关内容（按相关性排序）：", ""]
+        for i, item in enumerate(items, 1):
+            meta = item.get("metadata") or {}
+            title = (item.get("title") or meta.get("document_title")
+                     or meta.get("filename") or "未命名条目")
+            page = item.get("page") or meta.get("page_number") or ""
+            if page in ("None", None, ""):
+                page = ""
+            score = item.get("rerank_score") or 0
+            text = (item.get("content") or item.get("document") or "").strip()
+            lines.append(f"【条目 {i}】{title}" + (f"（第 {page} 页）" if page else ""))
+            lines.append(f"相关度: {float(score):.3f}")
+            lines.append(text[:600] + ("…" if len(text) > 600 else ""))
+            lines.append("")
+
+        logger.info(
+            "search_reference finished | question=%r | hits=%s | total=%.2fs",
+            clean_question, len(items), time.perf_counter() - started,
+        )
+        return "\n".join(lines)
+
+    except Exception:
+        logger.exception("search_reference failed after %.2fs", time.perf_counter() - started)
+        return (
+            "工具书/业务指引检索暂时无法完成。请查看本地日志 "
+            f"{LOG_PATH} 以定位错误。"
+        )
+
+
+# ---------------------------------------------------------------------------
 # chroma_status（P2-3 最小版：只读诊断，不加载 Embedding / Reranker / LLM）
 # ---------------------------------------------------------------------------
 

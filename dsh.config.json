@@ -4,30 +4,27 @@
   "project_name": "law-agent-harness",
   "project_root": "/Users/simon/Documents/1-SLP",
   "_last_updated": "2026-08-30 — 面向一切皆插件的 P0 架构升级：新增 dsh-home 标准布局、P0 三 bundle、审批策略。",
-
   "paths": {
-    "mcp_registry":   "MCP/harness/mcp_registry.json",
-    "model_router":   "MCP/harness/model_router.json",
-    "profiles_dir":   "MCP/harness/dsh-home/profiles",
-    "skills_dir":     "MCP/harness/skills",
-    "logs_dir":       "MCP/law-search/logs",
-    "traces_dir":     "MCP/law-search/logs/dsh_traces",
+    "mcp_registry": "MCP/harness/mcp_registry.json",
+    "model_router": "MCP/harness/model_router.json",
+    "profiles_dir": "MCP/harness/dsh-home/profiles",
+    "skills_dir": "MCP/harness/skills",
+    "logs_dir": "MCP/law-search/logs",
+    "traces_dir": "MCP/law-search/logs/dsh_traces",
     "dsh_home_template": "MCP/harness/dsh-home",
-    "plugins_dir":    "MCP/harness/plugins",
+    "plugins_dir": "MCP/harness/plugins",
     "install_script": "MCP/harness/install_mcp.sh"
   },
-
   "dsh_environment": {
     "_comment": "真实启动 dsh 前需要 export 的变量。install_mcp.sh --apply 会自动把下面这些追加到 ~/.dsh/env 里。",
-    "HARNESS_ROOT":     "/Users/simon/Documents/1-SLP/MCP",
+    "HARNESS_ROOT": "/Users/simon/Documents/1-SLP/MCP",
     "DSH_HOME_DEFAULT": "~/.dsh",
-    "LAW_SEARCH_ROOT":  "/Users/simon/Documents/1-SLP/MCP/law-search",
-    "PY":               "/Users/simon/Documents/1-SLP/venv/bin/python",
-    "LAW_SEARCH_PY":    "/Users/simon/Documents/1-SLP/venv/bin/python",
+    "LAW_SEARCH_ROOT": "/Users/simon/Documents/1-SLP/MCP/law-search",
+    "PY": "/Users/simon/Documents/1-SLP/venv/bin/python",
+    "LAW_SEARCH_PY": "/Users/simon/Documents/1-SLP/venv/bin/python",
     "PYTHONUNBUFFERED": "1",
     "TOKENIZERS_PARALLELISM": "false"
   },
-
   "dsh_web_ui": {
     "_comment": "【P0 注意】原来的 default_profile: law-agent-workbench 是项目私有命名，dsh 不识别。现改为 dsh 标准 profile 目录名（见 MCP/harness/dsh-home/profiles/ 的两个子目录）。launcher 会按 dsh --profile <name> 加载。",
     "enabled": true,
@@ -39,14 +36,16 @@
       "lm-studio-workbench",
       "work-project"
     ],
-    "attach_mcp_servers": ["law-search", "filesystem"],
+    "attach_mcp_servers": [
+      "law-search-cloud",
+      "filesystem"
+    ],
     "default_model_provider": "auto",
     "start_command_templates": {
       "lm-studio-workbench": "dsh --profile lm-studio-workbench web",
-      "work-project":        "dsh --profile work-project web"
+      "work-project": "dsh --profile work-project web"
     }
   },
-
   "security": {
     "env_var_allowlist": [
       "DEEPSEEK_API_KEY",
@@ -59,10 +58,14 @@
       "HARNESS_ROOT",
       "LAW_SEARCH_ROOT"
     ],
-    "never_log_fields": ["api_key", "Authorization", "token", "secret"],
+    "never_log_fields": [
+      "api_key",
+      "Authorization",
+      "token",
+      "secret"
+    ],
     "pii_masking_in_traces": true
   },
-
   "bundles": {
     "_comment": "P0 必装三 bundle（安装脚本会执行 npm link）。列表对应 MCP/harness/plugins/<dir-name>。",
     "p0_required": [
@@ -81,7 +84,6 @@
       "@law-agent/observability-bundle"
     ]
   },
-
   "bionic_interop": {
     "_comment": "供 LM Studio Bionic (Code/Work Project) 读取 Harness 侧配置时使用。Bionic 通过读取 dsh.config.json 的 paths.* 字段定位 mcp_registry / model_router。DSH 与 Bionic 是两个并行工作台，配置互不覆盖但共享注册表。",
     "code_project_profile": "lm-studio-workbench",

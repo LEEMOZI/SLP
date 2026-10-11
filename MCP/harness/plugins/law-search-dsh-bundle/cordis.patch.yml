@@ -92,8 +92,7 @@
     #     transport: stdio
     #     command: npx
     #     args: ['-y', '@modelcontextprotocol/server-filesystem',
-    #            '/Users/simon/Documents/1-Work',
-    #            '/Users/simon/Documents/1-SLP/MCP/law-search/uploads']
+    #            '/Users/simon/Documents/1-Work']
 
     # ====================================================================
     # 6. law-search-cloud（远程，Tailscale IP — MacBook/本机通用）

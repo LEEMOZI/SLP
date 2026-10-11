@@ -27,92 +27,15 @@ libraries:
     sources:
 
 
-      # 本地法规库
-
-      - path: "/Users/simon/Desktop/Laws&Rules"
-
-        source_type: local
-
-        priority: 10
-
-
-
-      # 工作文件中的法律法规
+      # 法律法规主库（NAS 挂载卷）
+      # 2026-10-10 调整：Desktop/Laws&Rules 已迁移至本目录 0-Laws&Rules 子目录；
+      # 01-新规速览 源经用户确认移除，本库仅保留此一个源。
 
       - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-2 法律法规"
 
         source_type: local
 
         priority: 10
-
-
-
-      # 公众号监管新规整理
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-1 公众号/02-资管律动/02-律动/01-新规速览"
-
-        source_type: local
-
-        priority: 20
-
-
-      # =====================================================
-      # 原 professional_library 并入（2026-09-02 审计决策：
-      # 无独立检索工具消费，与 law_library 同质，靠 doc_type
-      # 标签区分——评注/讲座/行研以低 authority 自然沉底）
-      # 注意：刻意排除 07-合同模板（归 contract_library，防重复入库）
-      # =====================================================
-
-      # 律所培训讲座（中银大讲堂等，实务观点）
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/01-会议论坛"
-
-        source_type: local
-
-        priority: 20
-
-
-      # 律所内部业务指引（无当事人信息）
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/01-业务指引"
-
-        source_type: local
-
-        priority: 20
-
-
-      # 学习材料/行研报告（非法律内容占比较高，低权重）
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/02-学习材料"
-
-        source_type: local
-
-        priority: 30
-
-
-      # 专题公开政策法规汇编
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/03-问题研究"
-
-        source_type: local
-
-        priority: 20
-
-
-      # 散文件：普法/讲座材料
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/新未保法，“未”你而来-北师大四附中-针对学生(1).docx"
-
-        source_type: local
-
-        priority: 30
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/幼儿园、中小学、医院、体育馆常见法律纠纷及应对策略.pptx"
-
-        source_type: local
-
-        priority: 30
-
 
 
     description: |
@@ -162,14 +85,15 @@ libraries:
     sources:
 
 
-      # 公开案例语料（文件级原位引用，2026-08-30 新增）
+      # 公开案例语料（2026-10-10 调整：源改为 1-8 知识库/参考判例 目录，
+      # 原 Desktop 单文件源（指导性案例全集 docx）已迁移至该目录）
       # ⚠️ 1-5 工作资料（03-争议解决/02-非诉/01-常法）含客户案件敏感信息（当事人姓名、
       # 底稿、往来函件），禁止作为案例语料源——检索池若混入客户材料将违反保密义务。
       # 若需 ingest 特定文书，请显式加文件级 source 并确认内容可公开。
       # 注：「判决书中的公司法」（唐青林）与「上交所并购重组典型案例」为图片扫描版 PDF
       # （无文本层，pypdf 仅产出垃圾 chunks），需 OCR 后方可入库，暂不列入 sources。
 
-      - path: "/Users/simon/Desktop/Laws&Rules/民法典/最高人民法院指导性案例全集（截止至2024年5月30日第40批）.docx"
+      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-8 知识库/参考判例"
 
         source_type: local
 
@@ -217,20 +141,15 @@ libraries:
     sources:
 
 
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/07-合同模板"
+      # 合同与文书模板主库（NAS 挂载卷）
+      # 2026-10-10 调整：原 1-3 专业研究/07-合同模板 及 1-8 知识库/合同模板
+      # 经用户重组为 1-8 知识库/文书模板（含 合同模板/ 与 法律文书/ 两个子目录）
+
+      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-8 知识库/文书模板"
 
         source_type: local
 
         priority: 10
-
-
-      # 散文件：战配投资法律意见书模板
-
-      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-3 专业研究/战配投资法律意见书 - 模板v2.docx"
-
-        source_type: local
-
-        priority: 20
 
 
       # ⚠️ 保密铁律（2026-09-02）：以下源已移除——
@@ -238,7 +157,7 @@ libraries:
       # 属客户保密材料，禁止进入任何检索库。
       # 律师工作文件的入库路径：目录分拣到「01-文书模板与工作底稿」白名单区后，
       # 由 ingest.py 保密守卫（CONFIDENTIAL_ALLOW_SUBDIRS）放行。
-      # 模板类文件仅从 07-合同模板（自建范本）进入本库。
+      # 模板类文件仅从 1-8 知识库/文书模板（自建范本）进入本库。
 
 
 
@@ -249,6 +168,55 @@ libraries:
       合同审查资料、
 
       非诉法律文件
+
+
+
+
+# =====================================================
+# 03.5 工具书与业务指引库（2026-10-10 新增）
+# =====================================================
+# 原 professional_library 于 2026-09-02 并入 law_library；
+# 2026-10-10 用户决定拆回独立库，源指向 NAS「业务指南」目录
+# （1-学习材料 / 2-问题研究 / 3-业务指引）。「工具书与指引」
+# 空目录留待用户逐步补充后可再加为第二源。
+
+  reference_library:
+
+
+    enabled: true
+
+    type: reference
+
+    priority: 40
+
+
+
+    tags:
+
+      - 工具书
+      - 业务学习
+      - 操作指引
+      - 办案指南
+
+
+    sources:
+
+
+      - path: "/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/1-8 知识库/业务指南"
+
+        source_type: local
+
+        priority: 10
+
+
+
+    description: |
+
+      工具书、
+
+      业务学习材料、
+
+      操作指引与办案指南
 
 
 

@@ -1,55 +1,16 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "_comment": "DeepSeek Harness MCP Server 注册表。双工作台架构（2026-08-30）：law-search（stdio）供本机 LM Studio 工作台 + Bionic 挂载；law-search-cloud（SSE）为 DSH Web UI 云端接入预留（需 server.py 启用 SSE transport 且网络可达后启用）。新增/删除 MCP Server 只需修改本文件，无需改动 law-search 业务代码。",
-  "version": "1.1.0",
-  "_last_updated": "2026-08-30 — 双工作台架构：新增 law-search-cloud（SSE 预留）；workbench 分工见 profiles/",
+  "_comment": "DeepSeek Harness MCP Server 注册表。双工作台架构：原本地 law-search（stdio）已移除，统一改用 law-search-cloud（streamable-http 远程）作为法律检索入口。",
+  "version": "1.2.0",
+  "_last_updated": "已移除本地 law-search（stdio），统一保留 law-search-cloud（远程）作为法律检索入口。",
   "mcpServers": {
-    "law-search": {
-      "_status": "已就绪 ✅ — FastMCP stdio 模式，venv Python 启动。六个工具全部实现：search_law、chroma_status、ingest_rebuild、write_litigation、review_contract、evaluate_evidence（_planned_tools 已清空）。",
-      "command": "/Users/simon/Documents/1-SLP/venv/bin/python",
-      "args": [
-        "/Users/simon/Documents/1-SLP/MCP/law-search/server.py"
-      ],
-      "cwd": "/Users/simon/Documents/1-SLP/MCP/law-search",
-      "env": {
-        "PYTHONUNBUFFERED": "1",
-        "TOKENIZERS_PARALLELISM": "false",
-        "LLM_PROVIDER": "auto"
-      },
-      "transport": "stdio",
-      "capabilities": {
-        "tools": ["search_law", "search_case", "chroma_status", "ingest_rebuild", "write_litigation", "review_contract", "evaluate_evidence", "search_external", "read_document"],
-        "tool_descriptions": {
-          "search_law": "【优先使用·第一层】中国法律法规综合检索（本地 Chroma 知识库，免费、最快）。输入用户法律问题（含具体法条引用如'民法典第10条'），返回经 Query Understanding + 证据融合 + 重排序 + Answer Guard 校验的结构化回答，附证据覆盖度与来源法条。法律问题检索应首选此工具，结果不足时再尝试 search_legislation 或商业数据库。",
-          "search_case": "本地案例检索：检索指导性案例与案例资料（最高法指导性案例全集 40 批等）。需要类案参考、裁判观点时调用；法条依据请用 search_law。返回按相关性排序的案例要点摘录与出处。",
-          "chroma_status": "查看本地法律知识库（Chroma）运行状态：集合清单与 chunk 数、law_name 字段填充率、最近 ingest 自动快照（文件/时间/大小）、hash 索引最后修改时间。只读、不加载模型，建议在首次 search_law 前调用以确认知识库可用。",
-          "ingest_rebuild": "重建/增量更新本地法律知识库（封装 ingest.py）。默认 dry-run 只扫描不写入；confirm=True 才实际写入（写锁保护 + 自动快照保留 3 份，可能耗时数十分钟）。支持指定 libraries 子集与 limit 限量。",
-          "write_litigation": "起草中国法律文书：输入 doc_type（complaint起诉状/defense答辩状/representation代理词/legal_opinion法律意见书）+ case_facts 案情事实（必填）+ parties/claims/court 可选项。流程：案情检索本地法条 → 按标准文书结构生成 → 文中《法名》第X条引用经来源一致性校验，未经核实的引用在文末警告块标出。",
-          "review_contract": "审查合同/文件（PDF/Word doc·docx/PPT ppt·pptx/Excel xls·xlsx/txt/图片，≤20MB，限已授权目录）：输入 file_path（必填）+ contract_type/focus_points 可选项。支持扫描版 PDF 与拍照图片（自动 OCR，逐页上限 50 页）、旧版 .doc（textutil 转换）、错标扩展名自动按实际内容重读。流程：提取文本 → 检索本地法条 → 输出风险清单报告（高危/中等/提示分级 + 修改建议 + 缺失条款提示 + 签署建议）。报告中《法名》第X条引用经来源一致性校验，未经核实的引用在文末警告块标出。",
-          "evaluate_evidence": "评估诉讼证据材料：输入 evidence_text 证据清单（必填，逐项列明名称/内容/来源）+ case_facts/claims 可选项。输出三性分析（真实性/合法性/关联性逐项判断）、证明力排序、质证要点与补强建议、总体评价。诉讼策略参考，非司法认定。",
-          "search_external": "【末位兜底·仅在其他法律检索工具均未命中时调用】Web Search fallback（Tavily API，消耗免费配额 1,000 次/月）。调用前务必先尝试：1. search_law（本地知识库）2. search_legislation（@ansvar 法律库）3. pkulaw/wk-mcp（商业数据库）。仅当以上均无结果，或需查询最新法规动态时才使用。",
-          "read_document": "读取文档文件并返回提取的纯文本内容。支持 PDF（含扫描件 OCR）、Word(.doc/.docx)、PowerPoint(.pptx)、Excel(.xls/.xlsx)、图片(.png/.jpg 等 OCR)、纯文本(.txt/.md)。仅限已授权目录：/Users/simon/Documents/1-Work 与 law-search/uploads。"
-        },
-        "_planned_tools": []
-      },
-      "health_check": {
-        "type": "stdio_ping",
-        "timeout_sec": 60
-      },
-      "attach_to": {
-        "bionic_code_project": true,
-        "bionic_work_project": true,
-        "dsh_web_ui": true
-      }
-    },
     "filesystem": {
-      "_status": "已接入 ✅ — MCP 官方 @modelcontextprotocol/server-filesystem（npx 拉起）。暴露两个目录：1-Work（工作台文档区，含合同上传）与 law-search/uploads（合同审查测试上传区）。review_contract 工具的路径白名单与此一致。",
+      "_status": "已接入 ✅ — MCP 官方 @modelcontextprotocol/server-filesystem（npx 拉起）。暴露两个目录：1-Work（工作台文档区，含合同上传）（合同审查测试上传区）。review_contract 工具的路径白名单与此一致。",
       "command": "npx",
       "args": [
         "--yes",
         "@modelcontextprotocol/server-filesystem",
-        "/Users/simon/Documents/1-Work",
-        "/Users/simon/Documents/1-SLP/MCP/law-search/uploads"
+        "/Users/simon/Documents/1-Work"
       ],
       "env": {
         "NODE_OPTIONS": "--max-old-space-size=512"
@@ -57,9 +18,17 @@
       "transport": "stdio",
       "capabilities": {
         "tools": [
-          "read_file", "read_multiple_files", "write_file", "edit_file",
-          "create_directory", "list_directory", "directory_tree",
-          "move_file", "search_files", "get_file_info", "list_allowed_directories"
+          "read_file",
+          "read_multiple_files",
+          "write_file",
+          "edit_file",
+          "create_directory",
+          "list_directory",
+          "directory_tree",
+          "move_file",
+          "search_files",
+          "get_file_info",
+          "list_allowed_directories"
         ]
       },
       "attach_to": {
@@ -76,7 +45,18 @@
         "Authorization": "Bearer abcd1234ef"
       },
       "capabilities": {
-        "tools": ["search_law", "search_case", "chroma_status", "ingest_rebuild", "write_litigation", "review_contract", "evaluate_evidence", "search_external", "read_document"]
+        "tools": [
+          "search_law",
+          "search_case",
+          "search_reference",
+          "chroma_status",
+          "ingest_rebuild",
+          "write_litigation",
+          "review_contract",
+          "evaluate_evidence",
+          "search_external",
+          "read_document"
+        ]
       },
       "attach_to": {
         "bionic_code_project": false,
@@ -87,10 +67,22 @@
     "chinese-law": {
       "_status": "已接入 ✅ — @ansvar/chinese-law-mcp（npx 拉起）。1,188 部中国法律 + 行政法规 + 部门规章，62,981 条条文全文可搜（FTS5）。Apache 2.0 开源，本地 SQLite ~51MB。三级检索架构第二级：本地 Chroma → chinese-law → Tavily Web Search。",
       "command": "npx",
-      "args": ["-y", "@ansvar/chinese-law-mcp"],
+      "args": [
+        "-y",
+        "@ansvar/chinese-law-mcp"
+      ],
       "transport": "stdio",
       "capabilities": {
-        "tools": ["search_legislation", "get_provision", "list_sources", "validate_citation", "build_legal_stance", "format_citation", "check_currency", "about"],
+        "tools": [
+          "search_legislation",
+          "get_provision",
+          "list_sources",
+          "validate_citation",
+          "build_legal_stance",
+          "format_citation",
+          "check_currency",
+          "about"
+        ],
         "tool_descriptions": {
           "search_legislation": "【优先使用·第二层】全文搜索中国法律条文（FTS5，免费、本地 SQLite）。当 search_law（本地 Chroma）未命中时首选此工具。支持按关键词检索，返回匹配的条文片段+来源法名+条号。覆盖 1,188 部法律、62,981 条条文。",
           "get_provision": "按法名（document_id）+条号获取完整条文原文。document_id 支持中文名（如'公司法'）或英文（如'Company Law'）。免费、本地。",
@@ -112,44 +104,74 @@
     "pkulaw-law-search": {
       "_status": "已接入 ✅ — 【第三层】北大法宝法律语义检索（SSE 远程，商业付费）。当本地 search_law 和 @ansvar search_legislation 均未命中时使用。支持自然语言法律问题检索。",
       "url": "https://apim-gateway.pkulaw.com/mcp-law-search-service",
-      "headers": {"Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"},
+      "headers": {
+        "Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     },
     "pkulaw-law-keyword": {
       "_status": "已接入 ✅ — 【第三层】北大法宝法律关键词检索（SSE 远程，商业付费）。当本地库和 @ansvar 未命中时使用。按关键词精确匹配法条。",
       "url": "https://apim-gateway.pkulaw.com/mcp-law",
-      "headers": {"Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"},
+      "headers": {
+        "Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     },
     "pkulaw-case-semantic-search": {
       "_status": "已接入 ✅ — 【第三层】北大法宝案例语义检索（SSE 远程，商业付费）。当本地 search_case 未命中时使用。支持自然语言案例检索。",
       "url": "https://apim-gateway.pkulaw.com/mcp-case-search-service",
-      "headers": {"Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"},
+      "headers": {
+        "Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     },
     "pkulaw-case-keyword": {
       "_status": "已接入 ✅ — 【第三层】北大法宝案例关键词检索（SSE 远程，商业付费）。当本地 search_case 未命中时使用。按关键词精确匹配案例。",
       "url": "https://apim-gateway.pkulaw.com/mcp-case",
-      "headers": {"Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"},
+      "headers": {
+        "Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     },
     "pkulaw-citation-validator": {
       "_status": "已接入 ✅ — 【补充验证】北大法宝引用验证（SSE 远程，商业付费）。@ansvar validate_citation 的商业库补充验证。",
       "url": "https://apim-gateway.pkulaw.com/pku_citation_validator",
-      "headers": {"Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"},
+      "headers": {
+        "Authorization": "Bearer f6f0226b-7411-3b83-aa8a-6e00fbcdbf84"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     },
     "wk-mcp": {
       "_status": "已接入 ✅ — 【第三层】威科先行综合法律检索（SSE 远程，商业付费）。当本地库、@ansvar、北大法宝均未命中时使用。法条+案例+实务指南综合检索。",
       "url": "https://mcp.wkinfo.com.cn/mcp-servers/integrated/",
-      "headers": {"Authorization": "wk-1ZJ34YDanoRbNASe3yz13ru4RUAE1KOLXxZIhyDBqA8"},
+      "headers": {
+        "Authorization": "wk-1ZJ34YDanoRbNASe3yz13ru4RUAE1KOLXxZIhyDBqA8"
+      },
       "transport": "sse",
-      "attach_to": {"lm_studio": true, "dsh_web_ui": true}
+      "attach_to": {
+        "lm_studio": true,
+        "dsh_web_ui": true
+      }
     }
   }
 }
