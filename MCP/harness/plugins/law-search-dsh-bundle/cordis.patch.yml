@@ -123,3 +123,17 @@
         env:
           PYTHONUNBUFFERED: '1'
           HOME: '/Users/simon'
+
+    # ====================================================================
+    # 8. judgment-search（裁判文书检索，远程 streamable-http :8766）
+    #    依赖 MAC Studio 上 launchd com.judgment-search.cloud 常驻 + 建库完成
+    #    建库未完成的年份自动跳过，不影响可用年份检索
+    # ====================================================================
+    - id: mcp-judgment-search
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: judgment-search
+        transport: streamable-http
+        url: http://100.66.217.64:8766/mcp
+        headers:
+          Authorization: 'Bearer abcd1234ef'

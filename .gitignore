@@ -34,3 +34,11 @@ node_modules/
 # ===== 编辑器 =====
 .vscode/
 .idea/
+
+# judgment-search 建库产物（370GB 级 SQLite 分库，不入库）
+MCP/judgment-search/data/
+MCP/judgment-search/logs/
+MCP/judgment-search/build_*.log
+
+# iCloud 交付目录符号链接（真实链接在 ~/SLP交付输出，不入库）
+/交付输出

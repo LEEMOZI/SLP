@@ -100,6 +100,28 @@
         "dsh_web_ui": true
       }
     },
+    "judgment-search": {
+      "_status": "建设中 🚧 — 8800 万份裁判文书（1985-2024），SQLite FTS5 contentless + zstd 压缩全文，按年分库（B' 架构）。5 工具：search_judgment（全文+结构化过滤）/ get_judgment（单份全文）/ export_judgment / export_result / deliver_file（交付链路同 law-search）。HTTP :8766/mcp Bearer abcd1234ef，/files/ 免鉴权。2026-10-12 修复 docs 双插膨胀 bug 与 unicode61 中文子串漏召回（CJK 逐字索引+短语查询），未建完年份自动跳过。2018 真实规模验证中，通过后启动 37 年全量建库（约 2-4 小时）。",
+      "transport": "streamable-http",
+      "url": "http://100.66.217.64:8766/mcp",
+      "headers": {
+        "Authorization": "Bearer abcd1234ef"
+      },
+      "capabilities": {
+        "tools": [
+          "search_judgment",
+          "get_judgment",
+          "export_judgment",
+          "export_result",
+          "deliver_file"
+        ]
+      },
+      "attach_to": {
+        "bionic_code_project": false,
+        "bionic_work_project": false,
+        "dsh_web_ui": true
+      }
+    },
     "chinese-law": {
       "_status": "已接入 ✅ — @ansvar/chinese-law-mcp（npx 拉起）。1,188 部中国法律 + 行政法规 + 部门规章，62,981 条条文全文可搜（FTS5）。Apache 2.0 开源，本地 SQLite ~51MB。三级检索架构第二级：本地 Chroma → chinese-law → Tavily Web Search。",
       "command": "npx",
