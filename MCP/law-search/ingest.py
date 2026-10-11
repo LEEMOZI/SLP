@@ -17,6 +17,12 @@
 
 
 import os
+
+# 必须在导入 sentence_transformers / tokenizers 之前设置。
+# macOS 上 subprocess.run（如 textutil 转换 .doc）使用 fork()，
+# 若 tokenizers 已开启并行线程，fork 出的子进程会继承线程状态导致 segfault。
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 import re
 import json
 import hashlib
@@ -635,11 +641,7 @@ def read_pdf(path):
 
 
 
-            from core.ocr_service import extract_text_smart
-
-
-
-            ocr_text, ocr_meta = extract_text_smart(
+            ocr_text, ocr_meta = extract_text_smart_isolated(
 
 
                 path
@@ -745,6 +747,45 @@ def read_pdf(path):
 
 
 
+
+
+def extract_text_smart_isolated(path, max_ocr_pages=50, timeout_sec=1200):
+    """子进程隔离执行 OCR。
+
+    OCR 依赖 rapidocr / onnxruntime / opencv 原生库，特定扫描页会触发
+    SIGSEGV 进程级崩溃（无法 try/except 捕获）。放入独立子进程执行后：
+    崩溃 / 超时 → 抛 RuntimeError，由调用方记录并跳过该文件，
+    保证单个坏文件不会中断整批 ingest。
+    """
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, json; sys.path.insert(0, '.'); "
+        "from core.ocr_service import extract_text_smart; "
+        "text, meta = extract_text_smart(sys.argv[1], max_ocr_pages="
+        + str(int(max_ocr_pages)) + "); "
+        "print(json.dumps({'text': text, 'meta': meta}, ensure_ascii=False))"
+    )
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", code, path],
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"OCR 子进程超时({timeout_sec}s)")
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"OCR 子进程异常退出(returncode={proc.returncode}，疑似原生段错误)"
+        )
+    try:
+        data = json.loads(proc.stdout.strip().split("\n")[-1])
+        return data["text"], data["meta"]
+    except Exception as e:
+        raise RuntimeError(f"OCR 结果解析失败: {e}")
 
 
 # =====================================================

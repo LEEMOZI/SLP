@@ -80,7 +80,9 @@ def _extract_pdf(path: str, max_ocr_pages: int) -> Tuple[str, Dict[str, Any]]:
             if meta["ocr_pages"] >= max_ocr_pages:
                 meta["skipped_pages"] += 1
                 continue
-            pix = page.get_pixmap(dpi=200)  # 200dpi 兼顾速度与识别率
+            # 150dpi：200dpi 下特定扫描页内容会触发 rapidocr/opencv 原生段错误
+            # （实测：22-企业上市审核标准实证解析.pdf 第4页 200dpi 必崩，150dpi 正常且识别字符数一致）
+            pix = page.get_pixmap(dpi=150)
             text = _ocr_image_bytes(pix.tobytes("png"))
             meta["ocr_pages"] += 1
             if text:
