@@ -1,0 +1,407 @@
+{
+  "phase": "B_end2end",
+  "top_k": 8,
+  "cases": [
+    {
+      "id": "B1",
+      "category": "公司法",
+      "question": "有限责任公司股东出资不实应承担什么法律责任？设立时的其他股东是否承担连带责任？",
+      "time_s": 157.31,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 2442,
+      "final_chars": 5210,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.8592,
+      "evidence_kw_coverage": 1.0,
+      "answer_kw_coverage": 1.0,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "公司法修改条文理解与适用",
+          "article": "第五十条,第30条,第49条,第13条",
+          "source": "公司法修改条文理解与适用（曹守晔）",
+          "page": "177"
+        },
+        {
+          "id": "C2",
+          "type": "law",
+          "law": "2024 公司法理解与适用 上",
+          "article": "第五十条",
+          "source": "2024 公司法理解与适用 上",
+          "page": "294"
+        },
+        {
+          "id": "C3",
+          "type": "law",
+          "law": "2024 公司法理解与适用 上",
+          "article": "第五十条",
+          "source": "2024 公司法理解与适用 上",
+          "page": "290"
+        },
+        {
+          "id": "C4",
+          "type": "law",
+          "law": "2024 公司法理解与适用 上",
+          "article": "第五十条",
+          "source": "2024 公司法理解与适用 上",
+          "page": "289"
+        },
+        {
+          "id": "C5",
+          "type": "law",
+          "law": "公司法600问",
+          "article": "第31条,第94条,第13条",
+          "source": "公司法600问（上）",
+          "page": "450"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 151.33,
+        "retrieve_qu_s": 0.0,
+        "retrieve_embedding_s": 150.23,
+        "retrieve_chroma_filtered": 0.0,
+        "retrieve_chroma_merged": 60.0,
+        "retrieve_chroma_s": 0.32,
+        "retrieve_candidates": 60.0,
+        "retrieve_queries_n": 2.0,
+        "retrieve_intent": 3.0,
+        "retrieve_rerank_s": 0.79,
+        "retrieve_total_s": 151.33,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase4b_currency_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 5.98
+      }
+    },
+    {
+      "id": "B2",
+      "category": "劳动法",
+      "question": "用人单位违法辞退员工，劳动者可以主张什么赔偿？",
+      "time_s": 4.72,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 2139,
+      "final_chars": 5210,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.7065,
+      "evidence_kw_coverage": 1.0,
+      "answer_kw_coverage": 1.0,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "企业合规用工与应对法律",
+          "article": "第一百零二条",
+          "source": "企业合规用工与应对法律",
+          "page": "None"
+        },
+        {
+          "id": "C2",
+          "type": "law",
+          "law": "《现行劳动法律法规汇编》",
+          "article": "第三十条",
+          "source": "《现行劳动法律法规汇编》",
+          "page": "123"
+        },
+        {
+          "id": "C3",
+          "type": "law",
+          "law": "企业合规用工与应对法律",
+          "article": "第八十七条",
+          "source": "企业合规用工与应对法律",
+          "page": "None"
+        },
+        {
+          "id": "C4",
+          "type": "law",
+          "law": "企业合规用工与应对法律",
+          "article": "第四十五条",
+          "source": "企业合规用工与应对法律",
+          "page": "None"
+        },
+        {
+          "id": "C5",
+          "type": "judicial",
+          "law": "含民法典",
+          "article": "第四十五条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释] (《民法典及相关司法解释速查手册》[含民法典合同编司法解释].pdf)",
+          "page": "408"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 0.4,
+        "retrieve_qu_s": 0.0,
+        "retrieve_embedding_s": 0.03,
+        "retrieve_chroma_s": 0.02,
+        "retrieve_candidates": 60.0,
+        "retrieve_queries_n": 2.0,
+        "retrieve_intent": 3.0,
+        "retrieve_rerank_s": 0.36,
+        "retrieve_total_s": 0.4,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase4b_currency_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 4.31
+      }
+    },
+    {
+      "id": "B3",
+      "category": "民法典婚姻",
+      "question": "夫妻一方在婚姻关系存续期间以个人名义超出家庭日常生活需要所负的债务，是否属于夫妻共同债务？",
+      "time_s": 6.45,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 2932,
+      "final_chars": 5210,
+      "guard_passed": true,
+      "guard_warnings_count": 1,
+      "guard_warnings": [
+        "观点无据:举证责任"
+      ],
+      "guard_coverage": 0.6736,
+      "evidence_kw_coverage": 1.0,
+      "answer_kw_coverage": 1.0,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "judicial",
+          "law": "民法典及相关司法解释",
+          "article": "第一千零六十四条",
+          "source": "民法典及相关司法解释汇编 (民法典及相关司法解释汇编.docx)",
+          "page": "None"
+        },
+        {
+          "id": "C2",
+          "type": "judicial",
+          "law": "民法典及相关司法解释",
+          "article": "第一千零六十四条",
+          "source": "民法典及相关司法解释汇编 (民法典及相关司法解释汇编.pdf)",
+          "page": "213"
+        },
+        {
+          "id": "C3",
+          "type": "judicial",
+          "law": "含民法典",
+          "article": "第三十六条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释] (《民法典及相关司法解释速查手册》[含民法典合同编司法解释].pdf)",
+          "page": "245"
+        },
+        {
+          "id": "C4",
+          "type": "judicial",
+          "law": "最高人民法院关",
+          "article": "第三条",
+          "source": "最高人民法院关于审理涉及夫妻债务纠纷案件  适用法律有关问题的解释 (最高人民法院关于审理涉及夫妻债务纠纷案件  适用法律有关问题的解释.pdf)",
+          "page": "1"
+        },
+        {
+          "id": "C5",
+          "type": "law",
+          "law": "中国民法典",
+          "article": "第1065条",
+          "source": "中国民法典释义与案例评注：婚姻家庭编",
+          "page": "141"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 0.54,
+        "retrieve_qu_s": 0.0,
+        "retrieve_embedding_s": 0.04,
+        "retrieve_chroma_filtered": 0.0,
+        "retrieve_chroma_merged": 71.0,
+        "retrieve_chroma_s": 0.05,
+        "retrieve_candidates": 71.0,
+        "retrieve_queries_n": 2.0,
+        "retrieve_intent": 0.0,
+        "retrieve_rerank_s": 0.45,
+        "retrieve_total_s": 0.54,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase4b_currency_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 5.9
+      }
+    },
+    {
+      "id": "B4",
+      "category": "证券法",
+      "question": "内幕交易行为在证券法上应承担什么法律责任？",
+      "time_s": 4.85,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1986,
+      "final_chars": 4965,
+      "guard_passed": true,
+      "guard_warnings_count": 1,
+      "guard_warnings": [
+        "观点无据:举证责任"
+      ],
+      "guard_coverage": 0.7122,
+      "evidence_kw_coverage": 1.0,
+      "answer_kw_coverage": 1.0,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "law",
+          "law": "中华人民共和国证券法",
+          "article": "第七十六条",
+          "source": "中华人民共和国证券法",
+          "page": "None"
+        },
+        {
+          "id": "C2",
+          "type": "judicial",
+          "law": "含民法典",
+          "article": "第五十三条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释] (《民法典及相关司法解释速查手册》[含民法典合同编司法解释].pdf)",
+          "page": "812"
+        },
+        {
+          "id": "C3",
+          "type": "judicial",
+          "law": "含民法典",
+          "article": "",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释] (《民法典及相关司法解释速查手册》[含民法典合同编司法解释].pdf)",
+          "page": "777"
+        },
+        {
+          "id": "C4",
+          "type": "unknown",
+          "law": "资产证券化相关法规汇编",
+          "article": "第五十三条",
+          "source": "资产证券化相关法规汇编（202002） (资产证券化相关法规汇编（202002）.pdf)",
+          "page": "14"
+        },
+        {
+          "id": "C5",
+          "type": "unknown",
+          "law": "银行理财相关法规汇编",
+          "article": "第五十三条",
+          "source": "银行理财相关法规汇编（202002） (银行理财相关法规汇编（202002）.pdf)",
+          "page": "15"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 0.54,
+        "retrieve_qu_s": 0.0,
+        "retrieve_embedding_s": 0.03,
+        "retrieve_chroma_filtered": 0.0,
+        "retrieve_chroma_merged": 73.0,
+        "retrieve_chroma_s": 0.05,
+        "retrieve_candidates": 73.0,
+        "retrieve_queries_n": 2.0,
+        "retrieve_intent": 3.0,
+        "retrieve_rerank_s": 0.45,
+        "retrieve_total_s": 0.54,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase4b_currency_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 4.3
+      }
+    },
+    {
+      "id": "B5",
+      "category": "民法典总则",
+      "question": "向人民法院请求保护民事权利的诉讼时效期间是多久？有哪些特殊规定？",
+      "time_s": 3.55,
+      "evidence_items": 8,
+      "evidence_pack": 8,
+      "citations": 8,
+      "answer_chars": 1512,
+      "final_chars": 4113,
+      "guard_passed": true,
+      "guard_warnings_count": 0,
+      "guard_warnings": [],
+      "guard_coverage": 0.6727,
+      "evidence_kw_coverage": 0.8,
+      "answer_kw_coverage": 0.8,
+      "citations_sample": [
+        {
+          "id": "C1",
+          "type": "judicial",
+          "law": "新担保司法解释",
+          "article": "第188条",
+          "source": "新担保司法解释理解与适用 (新担保司法解释理解与适用.pdf)",
+          "page": "200"
+        },
+        {
+          "id": "C2",
+          "type": "judicial",
+          "law": "含民法典",
+          "article": "第一百八十八条",
+          "source": "《民法典及相关司法解释速查手册》[含民法典合同编司法解释] (《民法典及相关司法解释速查手册》[含民法典合同编司法解释].pdf)",
+          "page": "48"
+        },
+        {
+          "id": "C3",
+          "type": "judicial",
+          "law": "民法典及相关司法解释",
+          "article": "第一百八十八条",
+          "source": "民法典及相关司法解释汇编 (民法典及相关司法解释汇编.docx)",
+          "page": "None"
+        },
+        {
+          "id": "C4",
+          "type": "judicial",
+          "law": "民法典及相关司法解释",
+          "article": "第一百八十八条",
+          "source": "民法典及相关司法解释汇编 (民法典及相关司法解释汇编.pdf)",
+          "page": "54"
+        },
+        {
+          "id": "C5",
+          "type": "unknown",
+          "law": "中华人民共和国民法",
+          "article": "第一百三十五条",
+          "source": "中华人民共和国民法通则 (中华人民共和国民法通则.doc)",
+          "page": "None"
+        }
+      ],
+      "timing_detail": {
+        "phase1_retrieve_s": 0.42,
+        "retrieve_qu_s": 0.0,
+        "retrieve_embedding_s": 0.03,
+        "retrieve_chroma_filtered": 0.0,
+        "retrieve_chroma_merged": 60.0,
+        "retrieve_chroma_s": 0.03,
+        "retrieve_candidates": 60.0,
+        "retrieve_queries_n": 2.0,
+        "retrieve_intent": 3.0,
+        "retrieve_rerank_s": 0.36,
+        "retrieve_total_s": 0.42,
+        "phase2_fusion_s": 0.0,
+        "phase3_citation_s": 0.0,
+        "phase4_context_s": 0.0,
+        "phase4b_currency_s": 0.0,
+        "phase5_prompt_s": 0.0,
+        "phase6_llm_guard_s": 3.13
+      }
+    }
+  ],
+  "total_time_s": 176.87,
+  "aggregate": {
+    "guard_pass_rate": 1.0,
+    "avg_warnings": 0.4,
+    "avg_guard_coverage": 0.72,
+    "avg_ans_kw_cover": 0.96,
+    "avg_ev_kw_cover": 0.96,
+    "avg_time_s": 35.4
+  }
+}
