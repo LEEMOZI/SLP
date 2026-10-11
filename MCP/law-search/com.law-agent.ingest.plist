@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.law-agent.ingest</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/simon/Documents/1-SLP/MCP/law-search/run_incremental.sh</string>
+    </array>
+
+    <!-- 每日 03:30 增量入库（错开 NAS 备份窗口；睡眠唤醒后自动补跑） -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/law-search/logs/ingest_launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/law-search/logs/ingest_launchd.log</string>
+</dict>
+</plist>

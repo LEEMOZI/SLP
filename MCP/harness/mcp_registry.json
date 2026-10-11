@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "_comment": "DeepSeek Harness MCP Server 注册表。双工作台架构：原本地 law-search（stdio）已移除，统一改用 law-search-cloud（streamable-http 远程）作为法律检索入口。",
   "version": "1.2.0",
-  "_last_updated": "已移除本地 law-search（stdio），统一保留 law-search-cloud（远程）作为法律检索入口。",
+  "_last_updated": "2026-10-11: 新增 law-search(stdio) 与 session-storage 条目；修复 0-AI 僵尸路径",
   "mcpServers": {
     "filesystem": {
       "_status": "已接入 ✅ — MCP 官方 @modelcontextprotocol/server-filesystem（npx 拉起）。暴露两个目录：1-Work（工作台文档区，含合同上传）（合同审查测试上传区）。review_contract 工具的路径白名单与此一致。",
@@ -34,6 +34,38 @@
       "attach_to": {
         "bionic_code_project": false,
         "bionic_work_project": true,
+        "lm_studio_workbench": true
+      }
+    },
+    "law-search": {
+      "_status": "已接入 ✅ — FastMCP stdio 本地模式（MAC Studio 专用，无网络跳数，2026-10-11 修复 0-AI 僵尸路径）。远程客户端请用 law-search-cloud。工具与 law-search-cloud 完全一致（10 个）。",
+      "command": "/Users/simon/Documents/1-SLP/venv/bin/python",
+      "args": [
+        "/Users/simon/Documents/1-SLP/MCP/law-search/server.py"
+      ],
+      "cwd": "/Users/simon/Documents/1-SLP/MCP/law-search",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "LLM_PROVIDER": "auto"
+      },
+      "transport": "stdio",
+      "capabilities": {
+        "tools": [
+          "search_law",
+          "search_case",
+          "search_reference",
+          "chroma_status",
+          "ingest_rebuild",
+          "write_litigation",
+          "review_contract",
+          "evaluate_evidence",
+          "search_external",
+          "read_document"
+        ]
+      },
+      "attach_to": {
+        "dsh_web_ui": true,
         "lm_studio_workbench": true
       }
     },
@@ -170,6 +202,33 @@
       "transport": "sse",
       "attach_to": {
         "lm_studio": true,
+        "dsh_web_ui": true
+      }
+    },
+    "session-storage": {
+      "_status": "已接入 ✅ — 会话记忆 MCP（SQLite+FTS5，纯本地）。6 工具：sync_sessions/search_sessions/get_session/tag_session/export_session/stats。2026-10-11 接入 DSH bundle（cordis.patch.yml entry 7）。",
+      "command": "/Users/simon/Documents/1-SLP/venv/bin/python",
+      "args": [
+        "-u",
+        "/Users/simon/Documents/1-SLP/MCP/session-storage/server.py"
+      ],
+      "cwd": "/Users/simon/Documents/1-SLP/MCP/session-storage",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "HOME": "/Users/simon"
+      },
+      "transport": "stdio",
+      "capabilities": {
+        "tools": [
+          "sync_sessions",
+          "search_sessions",
+          "get_session",
+          "tag_session",
+          "export_session",
+          "stats"
+        ]
+      },
+      "attach_to": {
         "dsh_web_ui": true
       }
     }

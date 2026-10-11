@@ -107,3 +107,19 @@
         url: http://100.66.217.64:8765/mcp
         headers:
           Authorization: 'Bearer abcd1234ef'
+
+    # ====================================================================
+    # 7. session-storage（会话记忆，本地 stdio，SQLite+FTS5，纯离线）
+    #    依赖：venv 内 fastmcp / filelock / zstandard（已安装）
+    # ====================================================================
+    - id: mcp-session-storage
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: session-storage
+        transport: stdio
+        toolCallTimeoutMs: 120000
+        command: /Users/simon/Documents/1-SLP/venv/bin/python
+        args: ['-u', '/Users/simon/Documents/1-SLP/MCP/session-storage/server.py']
+        env:
+          PYTHONUNBUFFERED: '1'
+          HOME: '/Users/simon'

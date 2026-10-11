@@ -1,6 +1,6 @@
 # 法律智能检索系统 — 项目状态
 
-> 更新时间：2026-09-03
+> 更新时间：2026-10-11（全量重建完成 + OCR 段错误修复 + launchd 接管）
 
 ## 1. 目标
 
@@ -11,20 +11,24 @@
 ## 2. 架构
 
 ```
-LM Studio / Bionic（主界面）          DSH Desktop（备用界面）
-        │                                    │
-        └────────────┬───────────────────────┘
+本地客户端（MAC Studio）              远程客户端（MacBook 等，Tailscale 100.66.217.64）
+LM Studio / Bionic / DSH Desktop      Cherry Studio / WorkBuddy / DSH Desktop
+        │  stdio                                  │  streamable-http + Bearer Token
+        └────────────┬────────────────────────────┘
                      ▼
-            law-search MCP Server（stdio）
-            ├─ search_law / search_case
+            law-search MCP Server（10 个工具，含 search_reference）
+            ├─ search_law / search_case / search_contract / search_reference
             ├─ chroma_status / ingest_rebuild
-            ├─ write_litigation / review_contract
-            └─ evaluate_evidence
+            ├─ write_litigation / review_contract / evaluate_evidence
+            └─ read_document
                      │
          ┌───────────┼───────────┐
          ▼           ▼           ▼
     ChromaDB    LLM Router    Office/OCR
    (向量检索)  (本地→云端)   (文档解析)
+
+服务部署：launchd 接管（com.law-agent.cloud，RunAtLoad + KeepAlive）
+端口 0.0.0.0:8765，禁止公网暴露，仅 Tailscale / SSH 隧道访问
 ```
 
 ### 模型路由（auto 模式）
@@ -40,57 +44,61 @@ LM Studio / Bionic（主界面）          DSH Desktop（备用界面）
 ## 3. 目录结构
 
 ```
-0-AI/
+1-SLP/                     # 项目已从 0-AI 迁移并更名（2026-10，现全部在 MAC Studio）
 ├── MCP/
 │   ├── law-search/         # MCP 服务核心
-│   │   ├── server.py       # MCP 入口（7 个工具）
-│   │   ├── ingest.py       # 知识库构建
-│   │   ├── config/         # 统一配置包（唯一真相源）
-│   │   ├── core/           # 业务逻辑层
-│   │   ├── tests/          # 单元测试
-│   │   ├── chroma/         # 向量数据库持久化
-│   │   ├── chroma_snapshots/  # 快照（循环保留）
+│   │   ├── server.py       # MCP 入口（stdio + streamable-http 双模式，10 个工具）
+│   │   ├── ingest.py       # 知识库构建（增量 + OCR 子进程隔离）
+│   │   ├── config/         # 统一配置包（paths.yaml 四库 NAS 路径 + llm_config.py）
+│   │   ├── core/           # 业务逻辑层（含 ocr_service.py dpi=150 修复）
+│   │   ├── tests/          # 测试套件（office_reader / selfcheck / version_spot_check）
+│   │   ├── chroma/         # 向量数据库持久化（4 collection）
+│   │   ├── chroma_snapshots/  # 快照（循环保留，2026-10-11 四库齐整）
 │   │   └── requirements.txt
-│   └── harness/            # DSH 插件 + 配置
-│       ├── plugins/        # 3 个 P0 + 2 个 P1 bundle
-│       ├── skills/         # 技能定义
-│       ├── install_mcp.sh # 安装脚本
-│       ├── remote_access/  # 远程访问指南
-│       └── archive/        # Bionic profile 骨架（历史参考）
-├── DSH WorkSpace/          # DSH Desktop 预设
+│   ├── harness/            # DSH 插件 + 配置
+│   │   ├── plugins/        # 9 个 bundle（3 P0 + 3 P1 + 3 P2）
+│   │   ├── skills/         # 技能定义
+│   │   ├── mcp_registry.json  # MCP 注册表（9 服务）
+│   │   └── install_mcp.sh  # 安装脚本
+│   └── session-storage/    # 会话记忆独立 MCP（SQLite+FTS5）
 ├── venv/                    # Python 虚拟环境
 ├── dsh.config.json          # 项目根配置
-└── package.json
+└── PROJECT_STATUS.md
 ```
 
-## 4. 知识库现状
+## 4. 知识库现状（2026-10-11 全量重建完成）
 
-| 库名 | chunks | 状态 |
-|---|---|---|
-| law_library | 376,718 | ✅ 2026-09-02 01:53 全量入库（5,661 文件） |
-| case_library | 1,031 | ✅ 已入库（客户案卷材料已排除，符合保密义务） |
-| contract_library | 0 | 预留（未来存放法律文件模板） |
-| evidence_library | 0 | 已删除（审计结论：案卷材料属客户保密信息） |
-| professional_library | 0 | 已删除（并入 law_library，2026-09-02） |
-| research_library | 0 | 已删除（并入 law_library，2026-09-02） |
+| 库名 | chunks | 数据源（NAS 挂载卷） | 状态 |
+|---|---|---|---|
+| law_library | 268,969 | 1-2 法律法规 | ✅ 2026-10-11 08:32 |
+| case_library | 1,033 | 1-8 知识库/参考判例 | ✅ 2026-10-11 08:33 |
+| contract_library | 37,736 | 1-8 知识库/文书模板 | ✅ 2026-10-11 08:51 |
+| reference_library | 170,839 | 1-8 知识库/业务指南 | ✅ 2026-10-11 11:23（新建库首次全量） |
+| **合计** | **478,577** | 四库快照齐整（chroma_snapshots/） | 检索冒烟通过（稳态 0.18s） |
+
+- 数据源统一为 NAS 路径：`/Volumes/sata11-138XXXX2122/文档同步/电脑备份/MacBook Pro/1-Work/...`
+- MacBook 与 NAS 双向实时同步，MAC Studio 跑 ingest 即可增量入库
+- OCR 段错误修复（2026-10-11）：dpi 200→150（质量实测无损）+ 子进程隔离（单文件失败仅跳过）+ onnxruntime 固定 1.19.2
+- 遗留 80 个问题文件：11 个损坏/加密 PDF（OCR 隔离层跳过）+ 69 个旧版二进制 .ppt（textutil 不支持）
+- 裁判文书全量数据（NAS 94GB）规划为独立 judgment-search（SQLite FTS5 原位索引，不走 paths.yaml），未动工
 
 ## 5. 完成度
 
 | 模块 | 进度 | 说明 |
 |---|---|---|
-| MCP 服务 | 95% | 9 个工具已实现（mcp_registry.json），预热后 search_law 秒级响应 |
+| MCP 服务 | 100% | 10 个工具（含 search_reference，2026-10-10）；launchd 接管自启（2026-10-11） |
 | 工具收敛架构 | 100% | 三层同向防护（patch 铁律 + docstring 禁令 + STOP SIGNAL），实测 1 次调用出完整答案 |
 | LLM 多 Provider 路由 | 100% | 4 槽位，auto 路由+回退链；内部生成本地优先（2026-10-09） |
-| 知识库构建 | 70% | law_library 37.7 万 chunks 全量入库；OCR 50 页限制待新主机放开 |
+| 知识库构建 | 100% | 四库 478,577 chunks 全量重建（2026-10-11），增量入库已验证 |
 | **DSH 插件架构** | **100%** | **P0 + P1 + P2 全部补齐（2026-09-03）：3 P0 + 3 P1 + 3 P2 = 9 个 bundle，12 类扩展点全部接入** |
-| session-storage 插件 | 100% | 独立 Python MCP（6 工具），SQLite+FTS5，冒烟通过；LM Studio mcp.json 已接入 |
+| session-storage 插件 | 90% | 独立 Python MCP（6 工具），SQLite+FTS5；LM Studio 已接入，DSH/其他客户端待接入 |
 | LM Studio 本地模型 | 95% | qwen/qwen3.8-27b（MAC Studio 2026-10-09），32k ctx；备选 gemma-4-31b-qat / bonsai-27b / muse-glimmer |
 | DeepSeek API | 80% | 密钥文件回退已配置，auto 路由已生效 |
 | Bionic / LM Link | 10% | Provider 槽位预留，待激活 |
-| 远程访问 | 20% | SSH 隧道方案已设计，待主机到货部署 |
+| 远程访问 | 100% | Tailscale 三设备组网（2026-10-10）：MacBook / MAC Studio / iPhone；law-search-cloud 全客户端可达 |
 | 答案守卫 | 100% | 语义覆盖率（3 阶段）+诚实拒绝豁免，已接入主流程 |
-| Office 文件解析 | 100% | .doc/.docx/.pptx/.xlsx/.xls + 大文件截断 |
-| OCR | 80% | ocr_service.py 已实现并接入入库链路；MAC Studio 已放开至 500 页/文件（原 8GB 机器 50 页） |
+| Office 文件解析 | 100% | .doc/.docx/.pptx/.xlsx/.xls + 大文件截断；旧版二进制 .ppt 不支持（69 个待人工转换） |
+| OCR | 100% | dpi=150 + 子进程隔离修复段错误（2026-10-11）；500 页/文件；11 个损坏 PDF 待人工处理 |
 
 ## 6. 待办优先级
 
@@ -120,8 +128,8 @@ LM Studio / Bionic（主界面）          DSH Desktop（备用界面）
   - [x] install_mcp.sh 升级支持 P1 插件符号链接
   - [x] check_config_consistency.py 升级为 v3（新增 P1 bundle 校验）
   - [x] session-storage-fs: src/storage.js（465行 CommonJS）实现 StorageBackend 接口（append/replay）+ 会话管理器（search/get/tag/export/stats/sync）+ 自动同步定时器；通过 child_process 桥接 Python session-storage MCP 的 SQLite+FTS5 后端（2026-09-03）
-- [ ] 刑法/劳动法/婚姻法语料入库（部分受 8GB OCR 50 页限制，需新主机重跑）
-- [ ] 处置 4 个空 collection
+- [x] 刑法/劳动法/婚姻法语料入库（2026-10-11 随四库全量重建完成）
+- [x] 处置 4 个空 collection（2026-10-10 重构为 law/case/contract/reference 四库）
 - [ ] 激活 Bionic / LM Link Provider
 - [ ] lm-studio-workbench profile 完成 pnpm install
 
@@ -148,7 +156,16 @@ LM Studio / Bionic（主界面）          DSH Desktop（备用界面）
   - [x] 知识库增量维护：auto_sync_kb.sh（监控数据源变更 → 自动触发 ingest → 更新状态文件）
   - [x] 基准测试自动化：auto_benchmark.sh（Phase A/B 跑分 → 历史对比 → Markdown 报告）
 - [ ] 语料补充后重测基准（目标 Hit@1 90%+）
-- [ ] 新主机到货：LM Studio 转模型管理后台，DSH Desktop 转主界面，放开 OCR 限制重跑
+- [x] 新主机到货部署完成（MAC Studio：LM Studio 27B + Tailscale 组网 + launchd 自启，2026-10）
+
+## 6.1 当前待办（2026-10-11 审计产出）
+
+- [ ] judgment-search 方案 B 开发：NAS 裁判文书 94GB，SQLite FTS5 原位索引，独立 MCP 服务（最大功能缺口）
+- [ ] DSH Desktop 实机加载验证（配置侧已激活，需 Cmd+Q 重启后确认工具面板）
+- [ ] session-storage 接入 DSH Desktop
+- [ ] 增量 ingest launchd 排程（NAS 同步后夜间自动增量入库）
+- [ ] 重建后基准重测（run_benchmark.py，建立 478k chunks 新基线）
+- [ ] 80 个问题文件人工处理（11 损坏 PDF 可尝试 qpdf 修复；69 旧版 .ppt 需 PowerPoint/WPS 另存为 .pptx）
 
 ## 7. 关键配置文件
 
