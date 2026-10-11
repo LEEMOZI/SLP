@@ -863,6 +863,113 @@ def read_document(file_path: str, max_chars: int = 100_000) -> str:
         return f"文档解析出错：{exc}"
 
 
+# ============================================================
+# 交付输出：检索结果导出为文件并返回 URL
+#
+# 文件写入 ~/SLP交付输出/（iCloud Drive 同步目录），
+# 同时返回可通过 Tailscale 直接访问的 URL。
+# ============================================================
+
+# 交付目录：iCloud Drive 同步目录的符号链接（在配置阶段创建）
+_DELIVERY_DIR = Path.home() / "SLP交付输出"
+
+# 运行时确定的外部可达基址（Tailscale IP 或 --host）
+_EXTERNAL_BASE = os.environ.get("LAW_SEARCH_EXTERNAL_BASE", "http://100.66.217.64:8765")
+
+
+def _ensure_delivery_dir() -> Path:
+    """确保交付目录存在，返回 Path 对象。"""
+    target = Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "SLP交付输出"
+    target.mkdir(parents=True, exist_ok=True)
+    # 维护符号链接（已存在则更新）
+    link = _DELIVERY_DIR
+    try:
+        if link.is_symlink() or link.exists():
+            if not link.is_dir() or link.resolve() != target:
+                link.unlink(missing_ok=True)
+                link.symlink_to(target)
+        else:
+            link.symlink_to(target)
+    except OSError:
+        pass  # 符号链接失败不影响功能，直接用 target
+    return target if not _DELIVERY_DIR.is_dir() else _DELIVERY_DIR
+
+
+def _build_file_url(filename: str) -> str:
+    """构建外部可达的文件 URL。"""
+    return f"{_EXTERNAL_BASE}/files/{filename}"
+
+
+@mcp.tool()
+def export_result(
+    content: str,
+    filename: str = "",
+    format: str = "txt",
+) -> str:
+    """将检索结果或任意文本导出为文件，返回可通过 Tailscale 直接访问的 URL。
+
+    文件自动写入 iCloud Drive 同步目录（~/SLP交付输出/），
+    在 iPhone「文件」App 中可预览，同时返回 URL 供聊天界面直接点击打开。
+
+    Args:
+        content: 要导出的文本内容（必填）。
+        filename: 文件名（不含扩展名）。留空则自动生成时间戳文件名。
+        format: 文件格式，支持 txt / md / html（默认 txt）。
+    """
+    import json as _json
+    import re as _re
+    from datetime import datetime
+
+    started = time.perf_counter()
+
+    if not content or not content.strip():
+        return "内容为空，无需导出。"
+
+    fmt = (format or "txt").lower().strip()
+    if fmt not in ("txt", "md", "html"):
+        fmt = "txt"
+
+    if not filename or not filename.strip():
+        filename = f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    # 清理文件名：只保留中文、字母、数字、下划线、连字符
+    filename = _re.sub(r"[^\w\u4e00-\u9fff\-]", "_", filename).strip("_") or "export"
+
+    delivery_dir = _ensure_delivery_dir()
+    full_name = f"{filename}.{fmt}"
+    file_path = delivery_dir / full_name
+
+    # 处理重名：自动追加序号
+    counter = 1
+    while file_path.exists():
+        full_name = f"{filename}_{counter}.{fmt}"
+        file_path = delivery_dir / full_name
+        counter += 1
+
+    try:
+        file_path.write_text(content, encoding="utf-8")
+        url = _build_file_url(full_name)
+        elapsed = time.perf_counter() - started
+
+        result = {
+            "status": "ok",
+            "filename": full_name,
+            "path": str(file_path),
+            "url": url,
+            "size_bytes": len(content.encode("utf-8")),
+            "elapsed_s": round(elapsed, 3),
+            "icloud_sync": "文件已写入 iCloud Drive 目录，iPhone 可在「文件」App 中查看",
+        }
+        logger.info(
+            "export_result | file=%s | size=%s | %.3fs",
+            full_name, result["size_bytes"], elapsed,
+        )
+        return _json.dumps(result, ensure_ascii=False, indent=2)
+
+    except Exception as exc:
+        logger.exception("export_result error | file=%s", full_name)
+        return f"导出失败：{exc}"
+
+
 if __name__ == "__main__":
     # transport 由启动参数决定：
     #   stdio（默认）：MCP client 子进程挂载（Bionic / LM Studio / harness registry）
@@ -937,6 +1044,7 @@ if __name__ == "__main__":
         from starlette.responses import JSONResponse, PlainTextResponse
         from starlette.applications import Starlette
         from starlette.routing import Route, Mount
+        from starlette.staticfiles import StaticFiles
 
         _token = token  # closure
 
@@ -951,16 +1059,22 @@ if __name__ == "__main__":
                 "law-search MCP server\n"
                 f"- transport: {args.transport}\n"
                 "- endpoints: /mcp (streamable HTTP, default) | /sse (if enabled)\n"
-                "- auth:      Bearer Token required for all non-health paths\n"
+                "- files:     /files/<filename> (交付文件下载)\n"
+                "- auth:      Bearer Token required for all non-health/file paths\n"
             )
             return PlainTextResponse(msg)
+
+        # ---------- 静态文件路由（交付文件下载，无需鉴权）----------
+        _delivery_path = _ensure_delivery_dir()
 
         # ---------- 鉴权中间件（仍然通过 PUBLIC_PATHS 放行公开路由，保持一致语义）----------
         PUBLIC_PATHS = frozenset({"/health", "/healthz", "/", "/favicon.ico"})
 
         class BearerTokenAuthMiddleware(BaseHTTPMiddleware):
             async def dispatch(self, request, call_next):
-                if request.url.path in PUBLIC_PATHS:
+                path = request.url.path
+                # 公开路由 + /files/ 前缀放行（文件下载无需鉴权，URL 本身即凭证）
+                if path in PUBLIC_PATHS or path.startswith("/files/"):
                     return await call_next(request)
                 auth_header = request.headers.get("Authorization", "")
                 if not auth_header.startswith("Bearer "):
@@ -983,6 +1097,8 @@ if __name__ == "__main__":
                 Route("/", endpoint=_root),
                 Route("/health", endpoint=_health),
                 Route("/healthz", endpoint=_health),
+                # 静态文件服务：交付文件下载（无需鉴权，/files/ 前缀在中间件层放行）
+                Mount("/files", app=StaticFiles(directory=str(_delivery_path), html=False)),
                 # fastmcp http_app 内部已经路由了 /mcp /sse 等，这里挂载成 /
                 Mount("/", app=asgi_app),
             ],
