@@ -970,6 +970,84 @@ def export_result(
         return f"导出失败：{exc}"
 
 
+@mcp.tool()
+def deliver_file(file_path: str, filename: str = "") -> str:
+    """将已生成的任意格式文件（docx/pptx/xlsx/pdf 等）交付到输出目录，保持原格式不变。
+
+    文件复制到 iCloud Drive 同步目录（~/SLP交付输出/），
+    在 iPhone「文件」App 中可预览，同时返回 URL 供聊天界面直接点击打开或下载。
+
+    适用场景：工作任务已生成 docx/pptx/xlsx/pdf 等文件，需要跨设备查看时，
+    直接交付原文件，不做任何格式转换。
+
+    Args:
+        file_path: 源文件的绝对路径（必填）。
+        filename: 交付后的文件名（含扩展名）。留空则沿用源文件名。
+    """
+    import json as _json
+    import re as _re
+    import shutil
+
+    started = time.perf_counter()
+
+    src = (file_path or "").strip()
+    if not src:
+        return "文件路径不能为空。"
+
+    src_path = Path(os.path.expanduser(src)).resolve()
+    if not src_path.is_file():
+        return f"文件不存在：{src_path}"
+
+    # 文件名：默认沿用源文件名；自定义时校验合法性并保留扩展名
+    if filename and filename.strip():
+        base = _re.sub(r"[^\w\u4e00-\u9fff\-]", "_", filename.strip()).strip("_") or "file"
+        suffix = src_path.suffix  # 扩展名强制取源文件，防止格式错配
+        full_name = f"{base}{suffix}"
+    else:
+        full_name = src_path.name
+
+    delivery_dir = _ensure_delivery_dir()
+    dest_path = delivery_dir / full_name
+
+    # 同名不同内容时自动加序号（同名同内容则视为重复交付，直接返回现有 URL）
+    counter = 1
+    while dest_path.exists():
+        if dest_path.stat().st_size == src_path.stat().st_size:
+            break  # 同名同大小 → 大概率同一文件，直接复用
+        stem, suf = dest_path.stem, dest_path.suffix
+        dest_path = delivery_dir / f"{stem}_{counter}{suf}"
+        counter += 1
+
+    try:
+        if not dest_path.exists():
+            shutil.copy2(src_path, dest_path)
+
+        url = _build_file_url(dest_path.name)
+        elapsed = time.perf_counter() - started
+        size = dest_path.stat().st_size
+
+        result = {
+            "status": "ok",
+            "filename": dest_path.name,
+            "source": str(src_path),
+            "delivered_path": str(dest_path),
+            "url": url,
+            "size_bytes": size,
+            "format": dest_path.suffix.lstrip(".") or "unknown",
+            "elapsed_s": round(elapsed, 3),
+            "icloud_sync": "文件已复制到 iCloud Drive 目录（原格式不变），iPhone 可在「文件」App 中查看",
+        }
+        logger.info(
+            "deliver_file | %s -> %s | size=%s | %.3fs",
+            src_path, dest_path.name, size, elapsed,
+        )
+        return _json.dumps(result, ensure_ascii=False, indent=2)
+
+    except Exception as exc:
+        logger.exception("deliver_file error | src=%s", src_path)
+        return f"交付失败：{exc}"
+
+
 if __name__ == "__main__":
     # transport 由启动参数决定：
     #   stdio（默认）：MCP client 子进程挂载（Bionic / LM Studio / harness registry）

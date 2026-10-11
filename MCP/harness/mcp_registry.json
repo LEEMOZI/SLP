@@ -62,7 +62,8 @@
           "evaluate_evidence",
           "search_external",
           "read_document",
-          "export_result"
+          "export_result",
+          "deliver_file"
         ]
       },
       "attach_to": {
@@ -89,7 +90,8 @@
           "evaluate_evidence",
           "search_external",
           "read_document",
-          "export_result"
+          "export_result",
+          "deliver_file"
         ]
       },
       "attach_to": {
