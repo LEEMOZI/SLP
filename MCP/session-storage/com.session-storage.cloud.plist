@@ -27,5 +27,10 @@
     <string>/Users/simon/Documents/1-SLP/MCP/session-storage/logs/cloud-stdout.log</string>
     <key>StandardErrorPath</key>
     <string>/Users/simon/Documents/1-SLP/MCP/session-storage/logs/cloud-stderr.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+    </dict>
 </dict>
 </plist>
