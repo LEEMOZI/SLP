@@ -1,6 +1,6 @@
 # 法律智能检索系统 — 项目状态
 
-> 更新时间：2026-10-12（judgment-search 全量建库完成 + MCP 全客户端接入 + session-storage 服务端化 + 交付链路上线）
+> 更新时间：2026-10-12（judgment-search 全量建库 + 高频词调优 44x + 三服务全在线 + MCP 全客户端接入 + session-storage 服务端化 + 交付链路上线）
 
 ## 1. 目标
 
@@ -112,10 +112,12 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 | 磁盘占用 | 426.5 GB（`MCP/judgment-search/data/judgments/`） |
 | 架构 | B'：按年分库 SQLite + docs 表 zstd 压缩全文 + contentless FTS5 倒排 |
 | 中文检索 | 入库前 CJK 逐字空格化（seg）+ 查询侧同款转换 + 短语匹配，支持任意长度子串 |
-| 高频保护 | 三档排序保护（单次 rowid 探针分档），183 万命中 49s→50ms |
+| 高频保护 | 两档简化 + EXISTS 探针 + 排序取数两阶段分离（2026-10-12 调优） |
 
-抽样验收：毛善亮 1.06s / 合同纠纷 4.6s / 盗窃罪+中院过滤 0.74s / get_judgment 3ms。
-未达标项：「盗窃罪」13.3s、「民间借贷 利息」16.8s（高频词阈值待调优，结果正确仅延迟超标）。
+抽样验收（调优后，本地 Python 直接调用）：
+- 高频词达标：盗窃罪 13.3s→0.3s（44x）、民间借贷 利息 16.8s→0.7s（24x）、合同纠纷 4.6s→0.1s（46x）
+- 基准查询：毛善亮 0.7s、盗窃罪+court过滤 0.3s、get_judgment 3ms
+- 优化原理：探针用 EXISTS OFFSET 20000（双词 AND FTS 交集求扫 20 万行慢 7-8x，去掉中间档直接入库序兜底）；排序阶段纯 FTS 表无 JOIN 无 BLOB，大字段延迟到 Phase 2 IN 查询才读取
 
 ### 4.3 会话记忆库（session-storage-cloud，2026-10-12 服务端化）
 
@@ -128,7 +130,7 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 | 模块 | 进度 | 说明 |
 |---|---|---|
 | law-search MCP | 100% | 12 个工具（2026-10-12 新增 export_result / deliver_file）；launchd 接管 |
-| judgment-search MCP | 100% | 37 年 6862 万文书全量建库；三档排序保护；launchd 接管 |
+| judgment-search MCP | 100% | 37 年 6862 万文书全量建库；高频词调优后盗窃罪 0.3s/民间借贷 利息 0.7s（5s 内）；launchd 接管 |
 | session-storage 服务端化 | 100% | cloud_server.py + launchd + 两台 DSH 接入（2026-10-12） |
 | 交付链路 | 100% | ~/SLP交付输出/ + iCloud 同步 + /files/ 静态路由 + Tailscale URL；任意格式原样交付 |
 | 工具收敛架构 | 100% | 三层同向防护，实测 1 次调用出完整答案 |
@@ -158,16 +160,16 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 - [x] deliver_file / export_result + /files/ 交付链路（2026-10-12）
 - [x] judgment-search 全量建库 37 年 6862 万份 + 三档排序保护（2026-10-12，git 9393e1c）
 - [x] session-storage 服务端化 + 两台 DSH MCP 配置全量对齐（2026-10-12）
+- [x] judgment-search 高频词排序调优（2026-10-12，git 0309172）：两档简化 + EXISTS OFFSET 20000 探针 + 排序取数两阶段分离；盗窃罪 13.3s→0.3s（44x）、民间借贷 利息 16.8s→0.7s（24x）、合同纠纷 4.6s→0.1s（46x）
 - [x] 自动化运维：launchd 自启 ×3 + 增量 ingest 每日 03:30 + auto_benchmark.sh + auto_sync_kb.sh
 
 ### 当前待办（2026-10-12 审计产出）
 
-- [ ] judgment-search 高频词排序阈值调优（「盗窃罪」13.3s / 「民间借贷 利息」16.8s → 目标 5s 内）
 - [ ] 80 个问题文件人工处理（11 加密 PDF 可尝试 qpdf 修复；69 旧版 .ppt 需另存为 .pptx）
 - [ ] zstd 全文 blob 拆分迁移决策：建库已完成，可评估将 ~190GB 全文 blob 迁移 NAS 只读挂载，FTS+元数据留本地（仅全文查看依赖 NAS 在线）
-- [ ] 未提交文件入库：session-storage cloud_server.py / plist、judgment-search check_build.py、harness session-storage-cloud-sync 插件待 git commit
 - [ ] 激活 Bionic / LM Link Provider
 - [ ] lm-studio-workbench profile 完成 pnpm install
+- [ ] wk-mcp 令牌验证（记忆中旧令牌返回 401，需重新获取并同步两台 DSH servers 配置）
 
 ### 已知问题（不阻塞使用）
 
