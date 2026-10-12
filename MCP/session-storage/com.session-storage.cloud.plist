@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.session-storage.cloud</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/simon/Documents/1-SLP/venv/bin/python</string>
+        <string>/Users/simon/Documents/1-SLP/MCP/session-storage/cloud_server.py</string>
+        <string>--transport</string>
+        <string>http</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8767</string>
+        <string>--auth-token</string>
+        <string>abcd1234ef</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/session-storage</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/session-storage/logs/cloud-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/session-storage/logs/cloud-stderr.log</string>
+</dict>
+</plist>

@@ -1,0 +1,14 @@
+{
+  "name": "@law-agent/session-storage-cloud-sync",
+  "version": "0.1.0",
+  "description": "DSH 会话自动推送插件：监听 session/event，debounce 30 秒后从本地 session.jsonl.zstd 解析全部消息，POST 到 session-storage-cloud 的 /bulk-push 端点，实现跨设备共享会话记忆。",
+  "private": true,
+  "main": "src/sync.js",
+  "files": ["cordis.patch.yml", "src/sync.js"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}

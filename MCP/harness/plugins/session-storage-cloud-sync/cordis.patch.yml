@@ -1,0 +1,16 @@
+# @law-agent/session-storage-cloud-sync cordis.patch.yml
+#
+# DSH 会话自动推送插件配置
+
+- insert:
+    - id: session-storage-cloud-sync
+      name: '@law-agent/session-storage-cloud-sync'
+      config:
+        enabled: true
+        endpoint: http://100.66.217.64:8767/bulk-push
+        token: abcd1234ef
+        debounceMs: 30000           # 30 秒无新事件才推送
+        sessionDir: ~/Library/Application Support/dsh-desktop/harness/sessions
+        pushSource: dsh-sync
+        connectTimeoutMs: 5000
+        pushTimeoutMs: 15000
