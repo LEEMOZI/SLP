@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.law-agent.cloud</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/simon/Documents/1-SLP/venv/bin/python</string>
+        <string>/Users/simon/Documents/1-SLP/MCP/law-search/server.py</string>
+        <string>--transport</string>
+        <string>http</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8765</string>
+        <string>--auth-token</string>
+        <string>abcd1234ef</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/law-search</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+        <key>TOKENIZERS_PARALLELISM</key>
+        <string>false</string>
+        <key>LLM_PROVIDER</key>
+        <string>auto</string>
+        <key>PATH</key>
+        <string>/Users/simon/Documents/1-SLP/venv:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/law-search/logs/cloud-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/law-search/logs/cloud-stderr.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.judgment-search.cloud</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/simon/Documents/1-SLP/venv/bin/python</string>
+        <string>/Users/simon/Documents/1-SLP/MCP/judgment-search/server.py</string>
+        <string>--transport</string>
+        <string>http</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8766</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/judgment-search</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/judgment-search/logs/cloud-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/simon/Documents/1-SLP/MCP/judgment-search/logs/cloud-stderr.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>JUDGMENT_TOKEN</key>
+        <string>abcd1234ef</string>
+        <key>JUDGMENT_EXTERNAL_BASE</key>
+        <string>http://100.66.217.64:8766</string>
+    </dict>
+</dict>
+</plist>

@@ -52,7 +52,7 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 | 长任务（≥ 8000 字符） | deepseek_api | deepseek-chat（384K 上限） |
 | 本地失败 fallback | deepseek_api | 自动切换 |
 | MCP 内部生成 | lm_studio_local | MAC Studio 27B 本地优先，失败回落 DeepSeek 云端（省费用） |
-| Bionic / LM Link | 预留 | 待激活 |
+| Bionic Secure Cloud / LM Link | （未启用） | 长期预留：law-search 内部生成的扩展算力槽位，与 Bionic 客户端 MCP 配置无关 |
 
 ## 3. 目录结构
 
@@ -142,7 +142,7 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 | 答案守卫 | 100% | 法条号数字归一化调优后 pass_rate 100%，硬警告一票否决 |
 | LM Studio 本地模型 | 95% | qwen3.8-27b（32k ctx，支持最大 256K，可按需加大） |
 | DeepSeek API | 80% | 密钥文件回退已配置，auto 路由已生效 |
-| Bionic / LM Link | 10% | Provider 槽位预留，待激活 |
+| Bionic Secure Cloud / LM Link | 预留 | 扩展算力槽位（LM Studio 云端推理 / 跨设备 GPU），暂无 API Key，属长期预留非待办 |
 | MacBook 瘦客户端 | 100% | SSH 免密 + Tailscale 组网 + 全部 MCP 远程调用 Studio |
 
 ## 6. 待办优先级
@@ -163,13 +163,17 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 - [x] judgment-search 高频词排序调优（2026-10-12，git 0309172）：两档简化 + EXISTS OFFSET 20000 探针 + 排序取数两阶段分离；盗窃罪 13.3s→0.3s（44x）、民间借贷 利息 16.8s→0.7s（24x）、合同纠纷 4.6s→0.1s（46x）
 - [x] 自动化运维：launchd 自启 ×3 + 增量 ingest 每日 03:30 + auto_benchmark.sh + auto_sync_kb.sh
 
-### 当前待办（2026-10-12 审计产出）
+### 当前状态：无阻塞性待办
 
-- [ ] 80 个问题文件人工处理（11 加密 PDF 可尝试 qpdf 修复；69 旧版 .ppt 需另存为 .pptx）
-- [ ] zstd 全文 blob 拆分迁移决策：建库已完成，可评估将 ~190GB 全文 blob 迁移 NAS 只读挂载，FTS+元数据留本地（仅全文查看依赖 NAS 在线）
-- [ ] 激活 Bionic / LM Link Provider
-- [ ] lm-studio-workbench profile 完成 pnpm install
-- [ ] wk-mcp 令牌验证（记忆中旧令牌返回 401，需重新获取并同步两台 DSH servers 配置）
+所有审计产出项已评估：功能性能项（高频词排序）已完成；存储优化、外部令牌验证、历史遗留问题文件等非阻塞项统一归入"长期预留"或"已知问题"。
+
+### 长期预留（非当前待办，勿混淆）
+
+- Bionic Secure Cloud / LM Link Provider：law-search 内部生成的扩展算力槽位（llm_config.py 4 槽位中的 2 个），需 LM Studio API Key 才能启用；与 Bionic 客户端已配置好的 MCP 无关，当前本地 27B + DeepSeek fallback 已够用
+- judgment-search zstd 全文 blob 拆分迁移：当前剩余 223GB 无磁盘压力；NAS 同局域网延迟可接受但增加故障风险；磁盘告警后再启动改造
+- 80 个问题文件人工处理（11 加密 PDF + 69 旧版 .ppt）：法律检索链路不受影响，属历史数据源质量问题
+- wk-mcp 令牌验证：记忆中旧令牌返回 401，需重新获取；当前 Bionic/WorkBuddy 中 wk-mcp 已有预置授权可正常使用
+- lm-studio-workbench profile 完成 pnpm install：DSH Cordis 插件层 UI 增强；MacBook 无 Node.js 无法装；MCP 核心工具不依赖插件层；Law-search 内部生成已输出 Markdown 格式在各客户端正常渲染
 
 ### 已知问题（不阻塞使用）
 
