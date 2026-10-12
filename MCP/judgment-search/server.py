@@ -29,10 +29,10 @@ mcp = FastMCP("judgment-search")
 _zctx = zstandard.ZstdDecompressor()
 logger = None  # 由 _setup_logging 赋值
 
-# 高频保护阈值：2018 实测 183 万命中的全库 bm25+JOIN 拖到 49 秒，
-# 单次 rowid 探针仅需 ~18ms，据探针结果分三档：
+# 高频保护阈值：两档简化（去掉中间档以优化双词 AND 查询的探针速度）
+# 双词 AND 查询在大库 FTS 求交集本身就慢，EXISTS OFFSET 20000 比 OFFSET 200000 快 7-8x
 RANK_WINDOW = 20000     # 命中 ≤2万：全库 bm25 精确排序
-RANK_HARD_CAP = 200000  # 2万<命中≤20万：前 2 万候选内 bm25；>20万：入库序兜底
+# 命中 >2万：入库序兜底（时间序≈相关性足够，且毫秒级返回）
 
 
 def _setup_logging():
@@ -149,6 +149,8 @@ def search_judgment(
 
     results, searched = [], 0
     rank_notes = []  # 未做全库相关性排序的年份（高频保护触发记录）
+    terms = [w for w in re.split(r"\s+", query.strip()) if w]
+
     for db_path in _available_dbs():
         year = int(re.search(r"(\d{4})", db_path.stem).group(1))
         if year_from and year < year_from:
@@ -159,7 +161,34 @@ def search_judgment(
         con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         con.row_factory = sqlite3.Row
         try:
-            # 结构化过滤条件（三档排序模式共用）
+            # ── Phase 1: 探针 + 排序（纯 FTS 表，无 JOIN，无 BLOB）──────
+            # 优化 1: 探针用 EXISTS OFFSET 20000，只扫到第 20001 行就停
+            #         双词 AND 查询比物化 200001 行快 7-8x
+            # 优化 2: 两档简化（去掉中间档），>2万命中直接入库序兜底
+            over_cap = con.execute(
+                "SELECT EXISTS(SELECT 1 FROM docs_fts WHERE docs_fts MATCH ? LIMIT 1 OFFSET ?)",
+                (expr, RANK_WINDOW)).fetchone()[0]
+
+            # 取比 per_db 多 10 倍的 rowids，防止结构化过滤后数量不够
+            fetch_cap = min(per_db * 10, 20000)  # 排序阶段最多取 2 万 rowids
+
+            if not over_cap:
+                # 低/中频：全库 bm25 精确排序
+                rank_sql = "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ? ORDER BY bm25(docs_fts) LIMIT ?"
+                rank_params = [expr, fetch_cap]
+            else:
+                # 高频：入库序≈时间序兜底，毫秒级返回
+                rank_sql = "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ? ORDER BY rowid LIMIT ?"
+                rank_params = [expr, fetch_cap]
+                rank_notes.append(f"{year}(按入库序)")
+
+            top_rids = [r[0] for r in con.execute(rank_sql, rank_params).fetchall()]
+
+            if not top_rids:
+                continue
+
+            # ── Phase 2: 批量取数（JOIN docs 带过滤条件）────────────────
+            # 优化：先取排序 rowids，再用 IN 查询 docs，避免排序阶段 JOIN BLOB 大字段
             conds, filter_params = [], []
             if date_from:
                 conds.append("d.cprq >= ?")
@@ -176,40 +205,16 @@ def search_judgment(
             if case_type:
                 conds.append("d.ajlx LIKE ?")
                 filter_params.append(f"%{case_type}%")
-            where_rest = (" AND " + " AND ".join(conds)) if conds else ""
 
-            # 单次探针判定命中规模（LIMIT 截断，极端高频也仅毫秒级）
-            n_probe = con.execute(
-                "SELECT COUNT(*) FROM (SELECT rowid FROM docs_fts"
-                " WHERE docs_fts MATCH ? LIMIT ?)",
-                (expr, RANK_HARD_CAP + 1)).fetchone()[0]
-
+            placeholders = ",".join("?" * len(top_rids))
             cols = ("d.id, d.ah, d.ajmc, d.fy, d.ssdq, d.ajlx, d.slcx, d.cprq,"
                     " d.ay, d.nr_len, d.nr_zst")
-            if n_probe <= RANK_WINDOW:
-                # 低/中频：全库 bm25 精确排序
-                sql = (f"SELECT {cols} FROM docs_fts f JOIN docs d ON d.id = f.rowid"
-                       f" WHERE docs_fts MATCH ?{where_rest}"
-                       " ORDER BY bm25(docs_fts) LIMIT ?")
-                params = [expr, *filter_params, per_db]
-            elif n_probe <= RANK_HARD_CAP:
-                # 中高频：前 2 万候选内 bm25（避免全量打分+JOIN 取 BLOB 拖到分钟级）
-                sql = (f"SELECT {cols} FROM (SELECT rowid AS rid, bm25(docs_fts) AS s"
-                       f" FROM docs_fts WHERE docs_fts MATCH ? LIMIT {RANK_WINDOW})"
-                       f" t JOIN docs d ON d.id = t.rid{where_rest}"
-                       " ORDER BY t.s LIMIT ?")
-                params = [expr, *filter_params, per_db]
-                rank_notes.append(f"{year}(前{RANK_WINDOW}条内排序)")
-            else:
-                # 极端高频：入库序≈时间序兜底，毫秒级返回
-                sql = (f"SELECT {cols} FROM docs_fts f JOIN docs d ON d.id = f.rowid"
-                       f" WHERE docs_fts MATCH ?{where_rest}"
-                       " ORDER BY f.rowid LIMIT ?")
-                params = [expr, *filter_params, per_db]
-                rank_notes.append(f"{year}(按入库序)")
+            where_filter = (" AND " + " AND ".join(conds)) if conds else ""
+            fetch_sql = (f"SELECT {cols} FROM docs d WHERE d.id IN ({placeholders})"
+                         f"{where_filter} LIMIT ?")
+            fetch_params = top_rids + filter_params + [per_db]
 
-            terms = [w for w in re.split(r"\s+", query.strip()) if w]
-            for r in con.execute(sql, params):
+            for r in con.execute(fetch_sql, fetch_params):
                 nr = _zctx.decompress(r["nr_zst"]).decode("utf-8", errors="replace")
                 results.append({
                     "db": db_path.stem.replace("judgments_", ""),
