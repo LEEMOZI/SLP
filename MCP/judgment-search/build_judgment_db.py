@@ -215,7 +215,8 @@ def main():
         print(f"❌ NAS 未挂载: {NAS_DIR}")
         sys.exit(1)
 
-    zips = sorted(NAS_DIR.glob("*年裁判文书数据.zip"))
+    # 2021 年包名带时间戳后缀（2021年裁判文书数据_20240114221318.zip），glob 需兼容
+    zips = sorted(NAS_DIR.glob("*年裁判文书数据*.zip"))
     if args.year:
         zips = [z for z in zips if args.year in z.stem]
     print(f"共 {len(zips)} 个年度包待处理", flush=True)
