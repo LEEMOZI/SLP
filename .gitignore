@@ -39,6 +39,7 @@ node_modules/
 MCP/judgment-search/data/
 MCP/judgment-search/logs/
 MCP/judgment-search/build_*.log
+*.err
 
 # iCloud 交付目录符号链接（真实链接在 ~/SLP交付输出，不入库）
 /交付输出
