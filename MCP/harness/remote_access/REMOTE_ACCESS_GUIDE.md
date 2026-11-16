@@ -6,8 +6,8 @@
 
 ```
 MacBook（客户端）                          MAC Studio（算力主机）
-┌──────────────────────────┐              ┌──────────────────────────────┐
-│ WorkBuddy                │  HTTP/SSE    │ LM Studio :1234 (27B 模型)   │
+ ┌──────────────────────────┐              ┌──────────────────────────────┐
+│ WorkBuddy                │  HTTP/SSE    │ LM Studio :1234 / 代理 :1235 │
 │ LM Studio Bionic         │ ───────────→ │ law-search-cloud :8765 (SSE) │
 │ DSH Desktop              │              │ ChromaDB (37.7 万 chunks)    │
 │ Cherry Studio            │              │ DeepSeek API (fallback)      │
@@ -30,7 +30,7 @@ tailscale ip -4
 ```
 
 ### 3. LM Studio 开启远程访问
-1. 打开 LM Studio → 加载模型（如 `qwen/qwen3.8-27b`）
+1. 打开 LM Studio → 加载模型（如 `qwen/qwen3.6-35b-a3b`）
 2. 左侧 **Developer** → **Local Server**
 3. 确认端口为 `1234`
 4. **Settings → Network → Allow LAN access** 开启（允许局域网访问）
@@ -52,6 +52,23 @@ bash MCP/law-search/run_cloud.sh --host 0.0.0.0
 /Users/simon/Documents/1-SLP/MCP/law-search/.secrets/cloud_auth_token
 ```
 
+### 5. 模型自动换模代理（端口 1235）
+
+LM Studio 的内存护栏不会自动换出已驻留模型：A3B 常驻时直接请求 27B 会返回
+HTTP 400（insufficient system resources）。SLP 内部的 `quality` 只覆盖 MCP
+工具调用，客户端直接聊天（Cherry / DSH / WorkBuddy）不经过 SLP。
+
+因此 Studio 上常驻一个转发代理，客户端 base URL 指向 **1235**：
+
+```
+客户端 → :1235 (lmstudio_proxy) → 判断 model → 必要时 unload/load → :1234 (LM Studio)
+```
+
+- 服务：`com.lawsearch.lmstudio-proxy`（launchd，RunAtLoad + KeepAlive）
+- 日志：`~/Library/Logs/lmstudio-proxy.log`
+- 启动：`launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.lawsearch.lmstudio-proxy.plist`
+- 换模约 10s，会打断同时进行的另一个模型的流式请求
+
 ## 二、客户端连接方案
 
 ### 方案 A：直接网络访问（局域网/Tailscale，推荐）
@@ -70,7 +87,7 @@ bash MCP/law-search/run_cloud.sh --host 0.0.0.0
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| LM Studio API | `http://100.66.217.64:1234/v1` | 本地大模型推理 |
+| LM Studio API | `http://100.66.217.64:1235/v1` | 本地大模型推理 |
 | law-search-cloud | `http://100.66.217.64:8765/mcp` | 法律检索 MCP（需 Bearer Token） |
 
 > 已实测：Tailscale IP 下 LM Studio 200 ✅ / law-search-cloud 401 鉴权正常 ✅
@@ -85,7 +102,7 @@ bash /Users/simon/Documents/1-SLP/MCP/harness/remote_access/connect_remote.sh <S
 ```
 
 隧道建立后，客户端配置使用 `localhost`：
-- LM Studio: `http://localhost:1234/v1`
+- LM Studio: `http://localhost:1235/v1`
 - law-search-cloud: `http://localhost:8765/mcp`
 
 ## 三、各客户端配置
@@ -100,10 +117,10 @@ bash /Users/simon/Documents/1-SLP/MCP/harness/remote_access/connect_remote.sh <S
 |------|-----|
 | Provider ID | `lm-studio-remote` |
 | Display name | `LM Studio (MAC Studio)` |
-| Base URL | `http://<StudioIP>:1234/v1`（方案 A）<br>或 `http://localhost:1234/v1`（方案 B） |
+| Base URL | `http://<StudioIP>:1235/v1`（方案 A）<br>或 `http://localhost:1235/v1`（方案 B） |
 | API protocol | `openai-completions` |
 | API Key | `lm-studio` |
-| Models | `qwen/qwen3.8-27b` |
+| Models | `qwen/qwen3.6-35b-a3b` |
 
 **MCP Server 配置**（连接 law-search-cloud）：
 
@@ -133,8 +150,8 @@ DSH Desktop → Settings → MCP → Add Server：
 |------|-----|
 | 名称 | `LM Studio (MAC Studio)` |
 | API Key | `lm-studio` |
-| 接口地址 | `http://<StudioIP>:1234/v1` |
-| 模型 | `qwen/qwen3.8-27b` |
+| 接口地址 | `http://<StudioIP>:1235/v1` |
+| 模型 | `qwen/qwen3.6-35b-a3b` |
 
 **MCP 配置**：
 
@@ -156,9 +173,9 @@ Bionic 支持配置远程 LM Studio 作为推理后端：
 | 字段 | 值 |
 |------|-----|
 | Name | `LM Studio Remote` |
-| Base URL | `http://<StudioIP>:1234/v1` |
+| Base URL | `http://<StudioIP>:1235/v1` |
 | API Key | `lm-studio` |
-| Model | `qwen/qwen3.8-27b` |
+| Model | `qwen/qwen3.6-35b-a3b` |
 
 **MCP Server**：Bionic 的 MCP 配置指向 law-search-cloud SSE 端点（同 DSH 配置）。
 
@@ -167,9 +184,9 @@ Bionic 支持配置远程 LM Studio 作为推理后端：
 WorkBuddy 通常支持 OpenAI 兼容接口和 MCP 协议：
 
 **模型配置**：
-- Base URL: `http://<StudioIP>:1234/v1`
+- Base URL: `http://<StudioIP>:1235/v1`
 - API Key: `lm-studio`
-- Model: `qwen/qwen3.8-27b`
+- Model: `qwen/qwen3.6-35b-a3b`
 
 **MCP 配置**：添加 streamableHttp 类型 MCP Server，URL 为 `http://<StudioIP>:8765/mcp`，Header 带 `Authorization: Bearer <token>`。
 
@@ -186,7 +203,7 @@ cat /Users/simon/Documents/1-SLP/MCP/law-search/.secrets/cloud_auth_token
 
 ```bash
 # 测试 LM Studio 可达
-curl http://<StudioIP>:1234/v1/models
+curl http://<StudioIP>:1235/v1/models
 
 # 测试 law-search-cloud 鉴权（无 token 应返回 401）
 curl -s -o /dev/null -w "%{http_code}" http://<StudioIP>:8765/mcp

@@ -24,7 +24,7 @@ Python 侧 `core/llm_client.py` 的 4-Provider 路由继续服务 MCP server 内
 | Provider | 模型 | 状态 | 用途 |
 |----------|------|------|------|
 | `deepseek_api` | deepseek-v4-flash/pro | ✅ 活跃 | 长任务 + 内部生成 |
-| `lm_studio_local` | qwen/qwen3.8-27b | ✅ 活跃 | 短任务（<8000字符） |
+| `lm_studio_local` | qwen/qwen3.6-35b-a3b（主力）/ qwen/qwen3.8-27b（复杂任务） | ✅ 活跃 | 日常 Agent / 短任务 |
 | `bionic_secure_cloud` | frontier-model-auto | ⏳ 预留 | 需配置 BIONIC_SC_API_KEY |
 | `lm_link` | remote-device-default | ⏳ 预留 | 需配置 LM_LINK_API_KEY |
 
@@ -32,9 +32,9 @@ Python 侧 `core/llm_client.py` 的 4-Provider 路由继续服务 MCP server 内
 
 | 条件 | Provider 选择 |
 |------|---------------|
-| prompt < 8000 chars | lm_studio_local → deepseek_api |
-| prompt >= 8000 chars | deepseek_api → lm_studio_local |
-| 内部生成（search_law 等） | deepseek_api（固定云端，避免本地 JIT ~3min） |
+| prompt <= 48K tokens | lm_studio_local → deepseek_api |
+| prompt > 48K tokens 或复杂任务 | deepseek_api → lm_studio_local |
+| 内部生成（search_law 等） | auto：短任务本地 A3B，长任务/复杂任务云端 |
 
 ## 配置来源
 

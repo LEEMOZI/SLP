@@ -30,6 +30,8 @@
         <string>false</string>
         <key>LLM_PROVIDER</key>
         <string>auto</string>
+        <key>LAW_SEARCH_TOOL_PROFILE</key>
+        <string>lean</string>
         <key>PATH</key>
         <string>/Users/simon/Documents/1-SLP/venv:/usr/local/bin:/usr/bin:/bin</string>
     </dict>

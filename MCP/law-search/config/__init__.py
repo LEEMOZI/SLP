@@ -20,6 +20,7 @@ law-search 项目的唯一配置真相源（Single Source of Truth）。
 
 from .path_config import *
 from .model_config import *
+from .agent_policy import *
 from .rag_config import *
 from .system_config import *
 from .prompt_config import *

@@ -44,3 +44,15 @@ MCP/judgment-search/build_*.log
 
 # iCloud 交付目录符号链接（真实链接在 ~/SLP交付输出，不入库）
 /交付输出
+
+# 法律工作台独立开发工作区
+.worktrees/
+
+# 案件、任务与工具运行产物（可能含案件材料，不入库）
+MCP/law-search/data/
+MCP/law-search/tool_outputs/
+MCP/law-search/tests/results/
+.trae-html-share-packages/
+
+# 含本机鉴权信息的停用客户端配置
+MCP/law-search/mcp-entry-law-search-cloud.DISABLED.json

@@ -13,7 +13,7 @@
       config:
         serverName: law-search
         transport: stdio
-        toolCallTimeoutMs: 240000
+        toolCallTimeoutMs: 600000
         command: /Users/simon/Documents/1-SLP/venv/bin/python
         args: ['-u', '/Users/simon/Documents/1-SLP/MCP/law-search/server.py']
         env:

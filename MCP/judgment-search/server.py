@@ -15,6 +15,7 @@ import re
 import shutil
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -28,6 +29,37 @@ EXTERNAL_BASE = os.environ.get("JUDGMENT_EXTERNAL_BASE", "http://100.66.217.64:8
 mcp = FastMCP("judgment-search")
 _zctx = zstandard.ZstdDecompressor()
 logger = None  # 由 _setup_logging 赋值
+
+# 工具输出截断 + 落盘：避免单份判决书全文把 prompt 撑爆
+_TOOL_OUTPUT_MAX_CHARS = int(os.environ.get("JUDGMENT_TOOL_OUTPUT_MAX_CHARS", "4000"))
+# 单次检索墙钟预算：必须小于客户端 MCP 调用超时（DSH/Cherry 默认 60s），
+# 否则客户端会取消请求；到点后返回已扫描年份的部分结果，而不是继续跑。
+_SEARCH_DEADLINE_S = float(os.environ.get("JUDGMENT_SEARCH_DEADLINE_S", "45"))
+_SPILL_DIR = Path(
+    os.environ.get(
+        "JUDGMENT_SPILL_DIR",
+        "/Users/simon/Documents/1-SLP/MCP/law-search/tool_outputs",
+    )
+)
+
+
+def _cap_tool_output(text: str, tool: str) -> str:
+    """超过上限时只回传前 N 字符，完整内容落盘并给出续读方式。"""
+    if not isinstance(text, str) or len(text) <= _TOOL_OUTPUT_MAX_CHARS:
+        return text
+    try:
+        _SPILL_DIR.mkdir(parents=True, exist_ok=True)
+        spill = _SPILL_DIR / f"{tool}_{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}.txt"
+        spill.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        print(f"spill failed | tool={tool} | error={exc}", flush=True)
+        return text[:_TOOL_OUTPUT_MAX_CHARS] + f"\n\n...[输出已截断，共 {len(text):,} 字符]"
+    return (
+        f"{text[:_TOOL_OUTPUT_MAX_CHARS]}\n\n...[输出已截断] 完整内容共 {len(text):,} 字符，"
+        f"已落盘：{spill}\n"
+        f'需要剩余内容时调用 read_document(file_path="{spill}", '
+        f"offset={_TOOL_OUTPUT_MAX_CHARS}, max_chars=4000)。"
+    )
 
 # 高频保护阈值：两档简化（去掉中间档以优化双词 AND 查询的探针速度）
 # 双词 AND 查询在大库 FTS 求交集本身就慢，EXISTS OFFSET 20000 比 OFFSET 200000 快 7-8x
@@ -104,11 +136,21 @@ def _seg(s: str) -> str:
     return _CJK_RE.sub(lambda m: " ".join(m.group(1)), s) if s else ""
 
 
-def _match_expr(query: str) -> str:
-    """把用户查询转成 FTS5 MATCH 表达式：按空格拆词，多词 AND；
-    每词 CJK 逐字空格化后作短语匹配 → 支持任意长度中文子串。"""
+# 整句提问里的疑问/语气标记；单串长句按这些位置切分成关键词片段
+_SENTENCE_SPLIT = re.compile(
+    r"是否|能否|可否|如何|为什么|怎么|怎样|哪些|多少|何种|吗|？|。|，|,|、|；|;"
+)
+
+
+def _query_terms(query: str) -> list[str]:
+    """把查询拆成检索词。空格分隔优先；整句（单串长中文）按疑问词/标点切段，
+    避免"整句当短语"导致 AND 零命中。"""
     words = [w for w in re.split(r"\s+", query.strip()) if w]
-    return " AND ".join(f'"{_seg(w)}"' for w in words) if words else '""'
+    if len(words) == 1 and len(words[0]) >= 8:
+        parts = [p.strip() for p in _SENTENCE_SPLIT.split(words[0]) if len(p.strip()) >= 2]
+        if len(parts) > 1:
+            return parts[:6]
+    return words
 
 
 @mcp.tool()
@@ -123,10 +165,14 @@ def search_judgment(
     year_to: int = 0,
     limit: int = 10,
 ) -> str:
-    """检索 8800 万份裁判文书（1985-2024，SQLite FTS5 全文 + 结构化过滤）。
+    """检索 6800 万份裁判文书（1985-2021，SQLite FTS5 全文 + 结构化过滤）。
+
+    案例 / 类案 / 判决理由检索的首选工具（law-search 的 search_case 只有约 1000 条，覆盖面小）。
 
     Args:
-        query: 检索关键词，支持多词（空格分隔，AND 关系），如 "民间借贷 利息"
+        query: 检索关键词，空格分隔；多词为 AND（全部命中）。**建议 2–5 个实词，不要整句提问**，
+            如 "民间借贷 利息"、"差额补足 承诺函 信托"。整句（含"是否""如何"）会因 AND 而零命中，
+            此时会自动降级为部分匹配（OR，按相关性排序），并在 rank_notes 标注"部分匹配"。
         court: 按法院名称过滤（模糊包含，如 "北京市朝阳区人民法院"）
         cause: 按案由过滤（模糊包含，如 "民间借贷纠纷"）
         case_type: 按案件类型过滤（民事案件/刑事案件/行政案件/执行案件等）
@@ -135,31 +181,41 @@ def search_judgment(
         year_from: 年份区间起（与 date_* 二选一，跨年检索时更快）
         year_to: 年份区间止
         limit: 返回条数（默认 10，最大 50）
+
+    无结果时可换 2–3 组不同关键词重试；收窄年份区间能显著提速。
     """
     _setup_logging()
     t0 = time.perf_counter()
     limit = max(1, min(int(limit or 10), 50))
-    expr = _match_expr(query)
     if not query or not query.strip():
         return "query 不能为空。请提供检索关键词，例如：民间借贷 利息"
+    terms = _query_terms(query)
+    expr = " AND ".join(f'"{_seg(w)}"' for w in terms) if terms else '""'
+    # AND 零命中时的降级表达式：任一词命中即可（部分匹配）
+    or_expr = " OR ".join(f'"{_seg(w)}"' for w in terms) if len(terms) > 1 else ""
 
     courts = [c.strip() for c in re.split(r"[;,，；]", court) if c.strip()]
     causes = [c.strip() for c in re.split(r"[;,，；]", cause) if c.strip()]
     per_db = max(limit, 20)  # 每库取多一些再合并排序
 
-    results, searched = [], 0
-    rank_notes = []  # 未做全库相关性排序的年份（高频保护触发记录）
-    terms = [w for w in re.split(r"\s+", query.strip()) if w]
+    deadline = t0 + _SEARCH_DEADLINE_S
+    all_dbs = _available_dbs()
 
-    for db_path in _available_dbs():
+    def _search_one(db_path: Path) -> dict:
+        """单个年份库的检索。预算耗尽时立即返回空结果，供并行调度快速收尾。"""
         year = int(re.search(r"(\d{4})", db_path.stem).group(1))
-        if year_from and year < year_from:
-            continue
-        if year_to and year > year_to:
-            continue
-        searched += 1
+        if time.perf_counter() > deadline:
+            return {"results": [], "rank_note": None,
+                    "timed_out": True, "attempted": False}
+
+        rows, rank_note, hit_deadline = [], None, False
+        zctx = zstandard.ZstdDecompressor()  # 每线程独立，避免共享实例的线程安全问题
         con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         con.row_factory = sqlite3.Row
+        # 单库内部的长查询同样受总预算约束：SQLite 每 1000 个 VM 步回调一次
+        con.set_progress_handler(
+            lambda: 1 if time.perf_counter() > deadline else 0, 1000
+        )
         try:
             # ── Phase 1: 探针 + 排序（纯 FTS 表，无 JOIN，无 BLOB）──────
             # 优化 1: 探针用 EXISTS OFFSET 20000，只扫到第 20001 行就停
@@ -180,12 +236,29 @@ def search_judgment(
                 # 高频：入库序≈时间序兜底，毫秒级返回
                 rank_sql = "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ? ORDER BY rowid LIMIT ?"
                 rank_params = [expr, fetch_cap]
-                rank_notes.append(f"{year}(按入库序)")
+                rank_note = f"{year}(按入库序)"
 
             top_rids = [r[0] for r in con.execute(rank_sql, rank_params).fetchall()]
 
+            if not top_rids and or_expr:
+                # AND 零命中 → 降级部分匹配（OR），按相关性排序，避免整句提问 0 召回
+                over_cap = con.execute(
+                    "SELECT EXISTS(SELECT 1 FROM docs_fts WHERE docs_fts MATCH ? LIMIT 1 OFFSET ?)",
+                    (or_expr, RANK_WINDOW)).fetchone()[0]
+                if over_cap:
+                    top_rids = [r[0] for r in con.execute(
+                        "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ? ORDER BY rowid LIMIT ?",
+                        (or_expr, fetch_cap)).fetchall()]
+                else:
+                    top_rids = [r[0] for r in con.execute(
+                        "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ? ORDER BY bm25(docs_fts) LIMIT ?",
+                        (or_expr, fetch_cap)).fetchall()]
+                if top_rids:
+                    rank_note = f"{year}(部分匹配)"
+
             if not top_rids:
-                continue
+                return {"results": [], "rank_note": rank_note,
+                        "timed_out": False, "attempted": True}
 
             # ── Phase 2: 批量取数（JOIN docs 带过滤条件）────────────────
             # 优化：先取排序 rowids，再用 IN 查询 docs，避免排序阶段 JOIN BLOB 大字段
@@ -215,8 +288,8 @@ def search_judgment(
             fetch_params = top_rids + filter_params + [per_db]
 
             for r in con.execute(fetch_sql, fetch_params):
-                nr = _zctx.decompress(r["nr_zst"]).decode("utf-8", errors="replace")
-                results.append({
+                nr = zctx.decompress(r["nr_zst"]).decode("utf-8", errors="replace")
+                rows.append({
                     "db": db_path.stem.replace("judgments_", ""),
                     "rowid": r["id"],
                     "案号": r["ah"],
@@ -230,10 +303,42 @@ def search_judgment(
                     "全文长度": r["nr_len"],
                     "摘要": _highlight(nr, terms),
                 })
-        except sqlite3.OperationalError:
-            pass  # 该年 fts 表为空或未建
+        except sqlite3.OperationalError as exc:
+            if "interrupt" in str(exc).lower():
+                hit_deadline = True
+            # 其它 OperationalError：该年 fts 表为空或未建
         finally:
             con.close()
+        return {"results": rows, "rank_note": rank_note,
+                "timed_out": hit_deadline, "attempted": True}
+
+    selected = []
+    for db_path in all_dbs:
+        year = int(re.search(r"(\d{4})", db_path.stem).group(1))
+        if year_from and year < year_from:
+            continue
+        if year_to and year > year_to:
+            continue
+        selected.append(db_path)
+
+    workers = max(1, min(int(os.environ.get("JUDGMENT_SEARCH_WORKERS", "6")), 8))
+    results, searched, timed_out = [], 0, False
+    rank_notes = []  # 未做全库相关性排序的年份（高频保护触发记录）
+    if selected:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_search_one, p) for p in selected]
+            for fut in futures:
+                try:
+                    part = fut.result()
+                except Exception as exc:  # 单库异常不影响其它年份
+                    logger.warning("search_judgment | db scan failed: %s", exc)
+                    continue
+                if part["attempted"]:
+                    searched += 1
+                results.extend(part["results"])
+                if part["rank_note"]:
+                    rank_notes.append(part["rank_note"])
+                timed_out = timed_out or part["timed_out"]
 
     # bm25 越小越相关；跨库按库内排名合并：取每库前 limit 条再全局截断
     results = results[:limit * 3]
@@ -244,16 +349,24 @@ def search_judgment(
                     "date_from": date_from, "date_to": date_to,
                     "year_from": year_from, "year_to": year_to},
         "searched_years": searched,
+        "available_years": len(all_dbs),
         "total_hits_shown": len(results[:limit]),
         "elapsed_s": round(elapsed, 3),
         "note": "用 get_judgment(db, rowid) 取全文；用 export_judgment(db, rowid) 导出全文并返回 URL",
         "results": results[:limit],
     }
+    if timed_out:
+        out["timed_out"] = True
+        out["note"] = (
+            f"检索在 {_SEARCH_DEADLINE_S:.0f}s 预算内扫描了 {searched}/{len(all_dbs)} 个年份库，"
+            "以上为已扫描部分的结果。建议缩小年份区间（year_from/year_to），"
+            "或增加 court / cause / case_type 过滤后重试。"
+        )
     if rank_notes:
         out["rank_note"] = ("高频保护，以下年份未做全库相关性排序 → " + "、".join(rank_notes)
                             + "；建议添加过滤条件或使用更精确关键词")
     logger.info("search_judgment | %r | %s hits | %.3fs", query, len(results[:limit]), elapsed)
-    return json.dumps(out, ensure_ascii=False, indent=2)
+    return _cap_tool_output(json.dumps(out, ensure_ascii=False, indent=2), "search_judgment")
 
 
 @mcp.tool()
@@ -278,7 +391,7 @@ def get_judgment(db: str, rowid: int) -> str:
         meta = {k: r[k] for k in ("ah", "ajmc", "fy", "ssdq", "ajlx", "slcx", "cprq", "ay", "fl", "nr_len")}
         out = {"db": db, "rowid": rowid, **meta, "全文": nr}
         logger.info("get_judgment | %s/%s | %s 字", db, rowid, r["nr_len"])
-        return json.dumps(out, ensure_ascii=False, indent=2)
+        return _cap_tool_output(json.dumps(out, ensure_ascii=False, indent=2), "get_judgment")
     finally:
         con.close()
 
@@ -449,7 +562,11 @@ def _build_http_app():
             "- files:    /files/<filename>\n"
             f"- auth:     Bearer Token ({token[:4]}****)\n")
 
-    mcp_asgi = mcp.http_app(path="/mcp")
+    # stateless_http：不维护会话。检索类工具调用可能长达 60s+，客户端超时后
+    # 取消请求会触发 mcp 库的 "Request already responded to" 断言并让整个会话
+    # 崩溃，之后同一 Mcp-Session-Id 的调用全部返回 "Session not found"。
+    # 无状态模式下每次请求独立处理，取消不会再污染后续调用。
+    mcp_asgi = mcp.http_app(path="/mcp", stateless_http=True)
     return Starlette(
         lifespan=mcp_asgi.lifespan,
         middleware=[Middleware(AuthMiddleware)],

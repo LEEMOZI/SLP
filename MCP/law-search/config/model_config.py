@@ -15,6 +15,11 @@ RERANKER_MODEL = (
 # 本地LLM
 
 DEFAULT_LLM = (
+    "qwen/qwen3.6-35b-a3b"
+)
+
+# 复杂任务/质量备用
+QUALITY_LLM = (
     "qwen/qwen3.8-27b"
 )
 

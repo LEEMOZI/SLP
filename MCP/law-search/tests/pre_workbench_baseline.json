@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-11-16",
+  "purpose": "SLP 法律工作台开发前的生产能力与工具清单基线；不包含鉴权信息。",
+  "regression": {
+    "unit_tests": "27 passed",
+    "javascript_syntax": "passed",
+    "python_syntax": "passed",
+    "plist_json_shell_syntax": "passed"
+  },
+  "services": {
+    "law-search": {
+      "url": "http://127.0.0.1:8765",
+      "health": "ok",
+      "tools": [
+        "deliver_file",
+        "evaluate_evidence",
+        "export_result",
+        "open_case",
+        "read_document",
+        "review_contract",
+        "search_case",
+        "search_law",
+        "search_reference",
+        "write_litigation"
+      ]
+    },
+    "judgment-search": {
+      "url": "http://127.0.0.1:8766",
+      "health": "ok",
+      "years": 37,
+      "docs_total": 68627941,
+      "tools": [
+        "deliver_file",
+        "export_judgment",
+        "export_result",
+        "get_judgment",
+        "search_judgment"
+      ]
+    },
+    "session-storage": {
+      "url": "http://127.0.0.1:8767",
+      "health": "ok",
+      "tools": [
+        "export_session",
+        "get_session",
+        "push_session",
+        "search_sessions",
+        "session_stats",
+        "sync_sessions_tool",
+        "tag_session"
+      ]
+    }
+  },
+  "lm_studio": {
+    "loaded_model": "qwen/qwen3.6-35b-a3b",
+    "loaded_context_length": 131072
+  }
+}

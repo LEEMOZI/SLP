@@ -376,8 +376,8 @@ const inject = ['subagents'];
  *
  * @param {object} ctx — Cordis Context
  */
-async function apply(ctx) {
-  const pluginConfig = (ctx.config && ctx.config['subagent-legal']) || {};
+async function apply(ctx, pluginConfig) {
+  pluginConfig = pluginConfig || {}; // 0.2.2-rc.1: config 由 apply 第二参数注入
 
   const agents = pluginConfig.agents || DEFAULT_AGENTS;
   const parallelStrategy = pluginConfig.parallelStrategy || DEFAULT_PARALLEL_STRATEGY;

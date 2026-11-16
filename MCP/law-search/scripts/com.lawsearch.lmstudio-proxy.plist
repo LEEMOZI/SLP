@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.lawsearch.lmstudio-proxy</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/simon/Documents/1-SLP/venv/bin/python</string>
+        <string>/Users/simon/Documents/1-SLP/MCP/law-search/scripts/lmstudio_proxy.py</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/simon/Library/Logs/lmstudio-proxy.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/simon/Library/Logs/lmstudio-proxy.err.log</string>
+</dict>
+</plist>

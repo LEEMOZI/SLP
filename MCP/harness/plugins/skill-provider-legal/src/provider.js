@@ -371,8 +371,8 @@ const inject = ['skills'];
  *
  * @param {object} ctx — Cordis Context
  */
-async function apply(ctx) {
-  const pluginConfig = (ctx.config && ctx.config['skill-provider-legal']) || {};
+async function apply(ctx, pluginConfig) {
+  pluginConfig = pluginConfig || {}; // 0.2.2-rc.1: config 由 apply 第二参数注入
 
   const skillsDir = pluginConfig.skillsDir || DEFAULT_SKILLS_DIR;
   const refreshIntervalSec = pluginConfig.refreshIntervalSec || DEFAULT_REFRESH_INTERVAL_SEC;
@@ -387,8 +387,14 @@ async function apply(ctx) {
 
   // 注册到 Cordis
   if (ctx.skills && typeof ctx.skills.registerProvider === 'function') {
-    ctx.skills.registerProvider('legal', provider);
-    logger.info('SkillProvider 已注册: ctx.skills.registerProvider("legal", ...)');
+    try {
+      ctx.skills.registerProvider('legal', provider);
+      logger.info('SkillProvider 已注册: ctx.skills.registerProvider("legal", ...)');
+    } catch (err) {
+      // 0.2.2-rc.1 起 registerProvider 改为接收 factory 函数，旧签名会抛 TypeError。
+      // 降级为仅加载技能文件，不阻断插件激活与会话创建。
+      logger.warn(`SkillProvider 注册失败（DSH API 变更），进入降级模式: ${err.message}`);
+    }
   } else {
     // DSH 版本可能还没有 ctx.skills API，降级为日志提示
     logger.warn('ctx.skills.registerProvider 不可用 — 当前 DSH 版本可能不支持 SkillProvider API');

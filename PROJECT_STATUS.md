@@ -48,11 +48,14 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 
 | 任务 | Provider | 模型 |
 |---|---|---|
-| 短任务（< 8000 字符） | lm_studio_local | qwen/qwen3.8-27b（gguf, 32k ctx） |
-| 长任务（≥ 8000 字符） | deepseek_api | deepseek-chat（384K 上限） |
+| 日常 Agent / 短任务（≤ 48K tokens） | lm_studio_local | qwen/qwen3.6-35b-a3b（Q6_K, 128K ctx） |
+| 长任务（> 48K tokens）或复杂任务 | deepseek_api | deepseek-v4-flash / v4-pro |
 | 本地失败 fallback | deepseek_api | 自动切换 |
-| MCP 内部生成 | lm_studio_local | MAC Studio 27B 本地优先，失败回落 DeepSeek 云端（省费用） |
+| MCP 内部生成 | auto | 短任务本地 A3B，长任务/复杂任务云端；本地质量兜底 27B |
 | Bionic Secure Cloud / LM Link | （未启用） | 长期预留：law-search 内部生成的扩展算力槽位，与 Bionic 客户端 MCP 配置无关 |
+
+> 客户端直连模型走 `:1235` 自动换模代理（`scripts/lmstudio_proxy.py`，launchd 常驻），
+> 由代理按请求里的 `model` 先 unload 再 load，避免 LM Studio 内存护栏直接返回 400。
 
 ## 3. 目录结构
 
@@ -140,7 +143,7 @@ LM Studio / DSH Desktop               DSH Desktop（瘦客户端）/ Cherry Stud
 | MCP 客户端接入 | 100% | 两台 DSH 三层配置对齐（17 servers）：law-search-cloud / judgment-search / session-storage-cloud / 9×pkulaw / wk-mcp / chinese-law / filesystem |
 | pkulaw 全系列 | 100% | 9 个服务全部迁移 apim-gateway + streamable-http（旧 SSE 已清零） |
 | 答案守卫 | 100% | 法条号数字归一化调优后 pass_rate 100%，硬警告一票否决 |
-| LM Studio 本地模型 | 95% | qwen3.8-27b（32k ctx，支持最大 256K，可按需加大） |
+| LM Studio 本地模型 | 95% | qwen3.6-35b-a3b 主力 + qwen3.8-27b 质量备用（均 128K ctx，最大 262K） |
 | DeepSeek API | 80% | 密钥文件回退已配置，auto 路由已生效 |
 | Bionic Secure Cloud / LM Link | 预留 | 扩展算力槽位（LM Studio 云端推理 / 跨设备 GPU），暂无 API Key，属长期预留非待办 |
 | MacBook 瘦客户端 | 100% | SSH 免密 + Tailscale 组网 + 全部 MCP 远程调用 Studio |

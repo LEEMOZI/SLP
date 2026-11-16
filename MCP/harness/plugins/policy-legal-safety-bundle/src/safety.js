@@ -355,9 +355,9 @@ const inject = ['tools'];
  *
  * @param {object} ctx — Cordis Context
  */
-async function apply(ctx) {
+async function apply(ctx, config) {
   // 从 Cordis config 读取用户自定义配置（cordis.patch.yml 的 config 段）
-  const config = (ctx.config && ctx.config['policy-legal-safety']) || {};
+  config = config || {}; // 0.2.2-rc.1: config 由 apply 第二参数注入
 
   // 注册 tools/pre-execute hook
   // DSH Cordis waterfall：每个 hook 返回 { action: 'allow' | 'confirm' | 'deny' }

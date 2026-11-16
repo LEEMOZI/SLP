@@ -392,21 +392,31 @@ class LegalPipeline:
         prompt: str,
         evidence_text_or_list: Any,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> tuple[str, Dict[str, Any], bool, List[str], Optional[float]]:
         """P6: LLM → Answer Guard → (answer, guard_result, passed, warnings, coverage)。
 
         on_delta 提供时走流式补全（逐段回调增量），Guard 仍基于完整文本校验。
+        quality=True 时使用本地质量模型（27B），首次调用需约 10s 换驻留。
         """
+        provider_hint = (
+            None
+            if INTERNAL_GENERATION_PROVIDER in (None, "", "auto")
+            else INTERNAL_GENERATION_PROVIDER
+        )
+
         if on_delta is None:
             answer = DEFAULT_ROUTER.chat_completion(
                 prompt,
-                provider_hint=INTERNAL_GENERATION_PROVIDER,
+                provider_hint=provider_hint,
+                quality=quality,
             )
         else:
             answer = DEFAULT_ROUTER.chat_completion_stream(
                 prompt,
                 on_delta=on_delta,
-                provider_hint=INTERNAL_GENERATION_PROVIDER,
+                provider_hint=provider_hint,
+                quality=quality,
             )
 
         guard = check_answer(answer, evidence_text=evidence_text_or_list)
@@ -436,6 +446,7 @@ class LegalPipeline:
         top_k: int = 8,
         return_prompt: bool = True,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> Dict[str, Any]:
         """
         完整端到端法律问答。
@@ -545,7 +556,9 @@ class LegalPipeline:
         # ----- Phase 6: LLM + Guard -----
         t = time.perf_counter()
         answer, _guard_obj, guard_passed, guard_warnings, guard_coverage = (
-            self._phase6_llm_and_guard(prompt, evidence_pack, on_delta=on_delta)
+            self._phase6_llm_and_guard(
+                prompt, evidence_pack, on_delta=on_delta, quality=quality
+            )
         )
         timing["phase6_llm_guard_s"] = time.perf_counter() - t
         logger.info(
@@ -621,6 +634,7 @@ class LegalPipeline:
         question: str,
         top_k: int = 8,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> str:
         """MCP server.py 兼容接口：只返回最终字符串答案。
 
@@ -629,7 +643,13 @@ class LegalPipeline:
         """
         if not (question or "").strip():
             return "查询内容为空。请提供需要检索的法律问题或关键词。"
-        result = self.ask(question, top_k=top_k, return_prompt=False, on_delta=on_delta)
+        result = self.ask(
+            question,
+            top_k=top_k,
+            return_prompt=False,
+            on_delta=on_delta,
+            quality=quality,
+        )
         return result["final"]
 
     # ------------------------------------------------------------------
@@ -646,6 +666,7 @@ class LegalPipeline:
         court: str = "",
         top_k: int = 8,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> Dict[str, Any]:
         """文书起草管线：案情 → 法条检索 → 模板化 prompt → LLM 生成 → 引用校验。
 
@@ -735,9 +756,11 @@ class LegalPipeline:
 
         t = time.perf_counter()
         if on_delta is None:
-            document = chat_completion(prompt, max_tokens=8000)
+            document = chat_completion(prompt, max_tokens=8000, quality=quality)
         else:
-            document = chat_completion_stream(prompt, on_delta=on_delta, max_tokens=8000)
+            document = chat_completion_stream(
+                prompt, on_delta=on_delta, max_tokens=8000, quality=quality
+            )
         timing["llm_s"] = time.perf_counter() - t
 
         # ----- 引用一致性校验（warning 不阻断）-----
@@ -779,6 +802,7 @@ class LegalPipeline:
         focus_points: str = "",
         top_k: int = 6,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> Dict[str, Any]:
         """合同审查管线：文件 → 文本提取 → 法条检索 → 风险清单 prompt → LLM → 引用校验。
 
@@ -864,9 +888,11 @@ class LegalPipeline:
 
         t = time.perf_counter()
         if on_delta is None:
-            report = chat_completion(prompt, max_tokens=8000)
+            report = chat_completion(prompt, max_tokens=8000, quality=quality)
         else:
-            report = chat_completion_stream(prompt, on_delta=on_delta, max_tokens=8000)
+            report = chat_completion_stream(
+                prompt, on_delta=on_delta, max_tokens=8000, quality=quality
+            )
         timing["llm_s"] = time.perf_counter() - t
 
         # ----- 引用一致性校验（warning 不阻断）-----
@@ -910,6 +936,7 @@ class LegalPipeline:
         claims: str = "",
         top_k: int = 6,
         on_delta: DeltaCallback = None,
+        quality: bool = False,
     ) -> Dict[str, Any]:
         """证据评估管线：证据材料 → 法条检索（证据规则）→ 评估 prompt → LLM → 引用校验。"""
         from core.evidence_eval import build_eval_prompt, build_eval_query
@@ -949,9 +976,11 @@ class LegalPipeline:
 
         t = time.perf_counter()
         if on_delta is None:
-            report = chat_completion(prompt, max_tokens=8000)
+            report = chat_completion(prompt, max_tokens=8000, quality=quality)
         else:
-            report = chat_completion_stream(prompt, on_delta=on_delta, max_tokens=8000)
+            report = chat_completion_stream(
+                prompt, on_delta=on_delta, max_tokens=8000, quality=quality
+            )
         timing["llm_s"] = time.perf_counter() - t
 
         citation_warnings = (

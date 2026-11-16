@@ -58,7 +58,123 @@ def configure_logger() -> logging.Logger:
 logger = configure_logger()
 logger.info("Starting legal MCP server")
 
+# ============================================================
+# 工具输出截断 + 落盘：把单次工具返回的体积压到可控范围，
+# 避免一轮对话把 prompt 撑到几万 token（prefill 秒级变分钟级）。
+# ============================================================
+_TOOL_OUTPUT_MAX_CHARS = int(os.environ.get("LAW_SEARCH_TOOL_OUTPUT_MAX_CHARS", "4000"))
+_SPILL_DIR = Path(
+    os.environ.get(
+        "LAW_SEARCH_SPILL_DIR",
+        str(BASE_DIR / "tool_outputs"),
+    )
+)
+
+
+def _spill_text(text: str, tool: str) -> Optional[Path]:
+    """把完整输出落盘，返回路径；失败返回 None。"""
+    try:
+        _SPILL_DIR.mkdir(parents=True, exist_ok=True)
+        spill = _SPILL_DIR / f"{tool}_{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}.txt"
+        spill.write_text(text, encoding="utf-8")
+        return spill
+    except OSError as exc:
+        logger.warning("spill failed | tool=%s | error=%s", tool, exc)
+        return None
+
+
+def _cap_tool_output(text: str, tool: str) -> str:
+    """超过上限时只回传前 N 字符，完整内容落盘并给出续读方式。"""
+    if not isinstance(text, str) or len(text) <= _TOOL_OUTPUT_MAX_CHARS:
+        return text
+    spill = _spill_text(text, tool)
+    head = text[:_TOOL_OUTPUT_MAX_CHARS]
+    if spill is None:
+        return f"{head}\n\n...[输出已截断，共 {len(text):,} 字符；落盘失败，请缩小检索范围]"
+    return (
+        f"{head}\n\n...[输出已截断] 完整内容共 {len(text):,} 字符，已落盘：{spill}\n"
+        f'需要剩余内容时调用 read_document(file_path="{spill}", '
+        f"offset={_TOOL_OUTPUT_MAX_CHARS}, max_chars=4000)。"
+    )
+
 mcp = FastMCP("law-search")
+
+# 工具集档位：full=全部工具（默认）；lean=核心检索/交付 + 审查/起草 + 案件登记 10 个。
+# 工具 schema 会完整进入每轮 prompt，full 13 个实测约 7.9k tokens；lean 约 6.8k。
+_TOOL_PROFILE = os.environ.get("LAW_SEARCH_TOOL_PROFILE", "full").strip().lower()
+_LEAN_TOOLS = {
+    "open_case",
+    "search_law",
+    "search_case",
+    "search_reference",
+    "read_document",
+    "deliver_file",
+    "export_result",
+    "review_contract",
+    "write_litigation",
+    "evaluate_evidence",
+}
+
+
+def _register(fn):
+    """按 profile 决定是否注册为 MCP 工具；未注册的函数仍可在进程内调用。"""
+    if _TOOL_PROFILE == "lean" and fn.__name__ not in _LEAN_TOOLS:
+        logger.info("Tool skipped by lean profile: %s", fn.__name__)
+        return fn
+    return mcp.tool()(fn)
+
+
+def _log_allowed_roots() -> None:
+    """启动时校验文件授权目录，避免白名单与真实工作区脱节。"""
+    from config.path_config import (
+        ALLOWED_ROOTS,
+        DSH_UPLOADS_ROOT,
+        validate_allowed_roots,
+    )
+
+    missing = validate_allowed_roots()
+    required = [root for root in missing if root != DSH_UPLOADS_ROOT]
+    if required:
+        logger.warning(
+            "授权目录不存在或不可读（%d/%d）：%s",
+            len(required), len(ALLOWED_ROOTS), ", ".join(required),
+        )
+    if DSH_UPLOADS_ROOT in missing:
+        logger.info("DSH 上传区尚未创建（首次上传时自动创建）：%s", DSH_UPLOADS_ROOT)
+    if not missing:
+        logger.info("授权目录校验通过（%d 个）", len(ALLOWED_ROOTS))
+
+
+def _log_agent_policy() -> None:
+    """启动时打印上下文预算，便于确认 128K/路由配置已生效。"""
+    from config import (
+        AUTO_ROUTE,
+        LLM_PROVIDER_SOFT_TIMEOUT_SEC,
+        MAP_REDUCE_CHUNK_TOKENS,
+        MODEL_CONTEXT_TOKENS,
+        PROMPT_HARD_LIMIT_TOKENS,
+        PROMPT_SOFT_LIMIT_TOKENS,
+        SESSION_TTL_HOURS,
+        TOKEN_ESTIMATE_SAFETY_FACTOR,
+    )
+
+    logger.info(
+        "Agent policy | context=%s | soft=%s | hard=%s | "
+        "local_soft_timeout=%ss | session_ttl=%sh | chunk=%s | map_chunk=%s | "
+        "est_factor=%s",
+        MODEL_CONTEXT_TOKENS,
+        PROMPT_SOFT_LIMIT_TOKENS,
+        PROMPT_HARD_LIMIT_TOKENS,
+        LLM_PROVIDER_SOFT_TIMEOUT_SEC.get("lm_studio_local"),
+        SESSION_TTL_HOURS,
+        AUTO_ROUTE.get("chunk_prompt_tokens"),
+        MAP_REDUCE_CHUNK_TOKENS,
+        TOKEN_ESTIMATE_SAFETY_FACTOR,
+    )
+
+
+_log_allowed_roots()
+_log_agent_policy()
 
 # P1-1: 输入长度上限 — 防止 LLM 传入超长文本导致 OOM / context window 溢出
 _MAX_INPUT_CHARS = 50_000
@@ -162,9 +278,17 @@ def _make_stream_reporter(ctx: Context, started: float):
 async def search_law(
     question: str,
     top_k: int = 8,
+    quality: bool = False,
     ctx: Context = None,
 ) -> str:
     """【第一层·法律检索唯一入口·正常 99% 问题只需调用 1 次】检索本地中国法律法规、司法解释、资料（Chroma 向量库，免费，最快）。
+
+    ## quality 参数（本地质量模型）
+    - `quality=False`（默认）：主力模型 qwen/qwen3.6-35b-a3b，快，适合日常检索。
+    - `quality=True`：质量模型 qwen/qwen3.8-27b，用于复杂争议分析、需要更严谨推理的场景。
+      首次调用需约 10s 卸载 A3B 并加载 27B；此后 27B 常驻，再调用直接走。
+      下一次不带 quality 的调用会自动换回 A3B（同样约 10s）。
+    - 一次任务内如需多次调用，要么全程 quality=True，要么全程 False；混用会反复换模（每次约 10s）。
 
     ## 🔴 工具调用铁律（违反会导致循环调用 + 5 分钟超时，必须严格执行）
 
@@ -213,7 +337,7 @@ async def search_law(
         logger.warning("Rejected oversized search request | len=%s", len(clean_question))
         return f"查询内容过长（{len(clean_question)} 字），请精简至 {_MAX_INPUT_CHARS} 字以内。"
 
-    logger.info("Tool call received | question=%r | top_k=%s", clean_question, top_k)
+    logger.info("Tool call received | question=%r | top_k=%s | quality=%s", clean_question, top_k, quality)
 
     try:
         pipeline = _get_pipeline()
@@ -224,6 +348,7 @@ async def search_law(
                 clean_question,
                 top_k=top_k,
                 on_delta=on_delta,
+                quality=quality,
             ),
             timeout=_PIPELINE_TIMEOUT_SEC,
         )
@@ -231,7 +356,7 @@ async def search_law(
             "search_law finished | chars=%s | total=%.2fs",
             len(final_answer), time.perf_counter() - started,
         )
-        return final_answer
+        return _cap_tool_output(final_answer, "search_law")
 
     except asyncio.TimeoutError:
         logger.error("search_law timed out after %ss", _PIPELINE_TIMEOUT_SEC)
@@ -260,6 +385,7 @@ async def write_litigation(
     claims: str = "",
     court: str = "",
     top_k: int = 8,
+    quality: bool = False,
     ctx: Context = None,
 ) -> str:
     """起草中国法律文书（起诉状/答辩状/代理词/法律意见书）。
@@ -277,6 +403,7 @@ async def write_litigation(
         claims: 诉讼请求/答辩要点/代理意见要点（可空，缺省由模型归纳）
         court: 受诉法院或致送对象名称（可空）
         top_k: 检索法条数量（默认 8）
+        quality: True 使用质量模型 27B（首次调用约 10s 换驻留），适合重要文书
     """
     started = time.perf_counter()
 
@@ -296,6 +423,7 @@ async def write_litigation(
             court=court or "",
             top_k=top_k,
             on_delta=on_delta,
+            quality=quality,
         )
         logger.info(
             "write_litigation finished | ok=%s | doc_type=%s | chars=%s | total=%.2fs",
@@ -325,16 +453,18 @@ async def review_contract(
     contract_type: str = "",
     focus_points: str = "",
     top_k: int = 6,
+    quality: bool = False,
     ctx: Context = None,
 ) -> str:
     """审查合同文件，输出风险清单报告。
 
     支持格式：PDF / Word(.docx) / txt / md / 图片(png·jpg 等扫描件，
-    自动 OCR 识别，逐页上限 50 页)。上限 20MB，仅限已授权目录：
-    /Users/simon/Documents/1-Work、law-search 项目目录、以及
-    DSH 上传区 /Users/simon/Documents/1-SLP/DSH WorkSpace/.dsh-uploads。
+    自动 OCR 识别，逐页上限 50 页)。上限 20MB，仅限
+    config/path_config.py 中 ALLOWED_ROOTS 授权的目录
+    （2-WorkSpace 工作区、Cherry Studio 上传区、law-search 项目目录、
+    DSH 上传区）。
 
-    路径说明：用户在对话中上传的文件实际存放于 DSH 上传区的 session 子目录
+    路径说明：用户在对话中上传的文件可能存放于 DSH 上传区的 session 子目录
     （文件名带 16 位 hash 前缀）。若传入的是原始路径/原始文件名且文件已不在
     原位置，工具会自动到上传区按文件名匹配，无需精确路径。
 
@@ -347,6 +477,7 @@ async def review_contract(
         contract_type: 合同类型，如 买卖/租赁/劳动/借款（可空，自动判断）
         focus_points: 重点关注条款或问题（可空）
         top_k: 检索法条数量（默认 6）
+        quality: True 使用质量模型 27B（首次调用约 10s 换驻留），适合重要合同
     """
     started = time.perf_counter()
 
@@ -360,6 +491,7 @@ async def review_contract(
             focus_points=focus_points or "",
             top_k=top_k,
             on_delta=on_delta,
+            quality=quality,
         )
         logger.info(
             "review_contract finished | ok=%s | file=%s | chars=%s | total=%.2fs",
@@ -383,12 +515,13 @@ async def review_contract(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
+@_register
 async def evaluate_evidence(
     evidence_text: str,
     case_facts: str = "",
     claims: str = "",
     top_k: int = 6,
+    quality: bool = False,
     ctx: Context = None,
 ) -> str:
     """评估诉讼证据材料，输出三性分析与证明力报告。
@@ -404,6 +537,7 @@ async def evaluate_evidence(
         case_facts: 案情背景（可空，帮助关联性判断）
         claims: 待证事实 / 诉讼主张（可空）
         top_k: 检索法条数量（默认 6）
+        quality: True 使用质量模型 27B（首次调用约 10s 换驻留），适合复杂证据体系
     """
     started = time.perf_counter()
 
@@ -421,6 +555,7 @@ async def evaluate_evidence(
             claims=claims or "",
             top_k=top_k,
             on_delta=on_delta,
+            quality=quality,
         )
         logger.info(
             "evaluate_evidence finished | ok=%s | chars=%s | total=%.2fs",
@@ -444,20 +579,21 @@ async def evaluate_evidence(
 
 @mcp.tool()
 async def search_case(question: str, top_k: int = 6) -> str:
-    """【第三层·条件触发·非默认】检索本地收录的指导性案例与案例资料（Chroma 向量库）。
+    """【第三层·条件触发】检索本地收录的指导性案例与案例资料（Chroma 向量库，约 1000 条）。
 
-    ## 🔴 调用条件（不满足严禁调用）
-    - 仅限用户在问题中明确提出："找案例""查判决书""类似案件""司法判例""指导案例" 等关键词时调用；
-    - 一般法律问答（问法条依据、法律适用、法律解释）严禁调用本工具，必须只用 search_law。
+    ## 🔴 与 judgment-search 的分工（先读）
+    - 本地向量案例库仅约 1000 条，覆盖面小；
+    - **需要真实裁判文书 / 类案 / 判决理由时，必须优先调用 judgment-search 的 search_judgment**；
+    - 本工具仅用于"指导性案例、案例资料、裁判要旨"这类需要向量语义匹配的场景，或 judgment-search 之后补位。
 
-    ## 🔴 次数约束
-    - 每个用户问题最多调用【1 次】，严禁换关键词反复重试；
-    - 与 search_law / search_external 合计，累计工具调用不得超过 3 次（到 3 次强制停）。
+    ## 调用条件
+    - 用户明确提出"找案例""查判决书""类似案件""司法判例""指导案例"等意图；
+    - 一般法律问答（问法条依据、法律适用、法律解释）用 search_law。
 
-    仅当本工具返回结果不足、且用户仍需要更多案例时，才依次尝试：
-      → pkulaw-case-semantic-search / pkulaw-case-keyword（北大法宝案例库）
-      → wk-mcp（威科先行综合检索）
-      → search_external（Tavily 全网搜索，末位兜底，仅限 1 次）
+    ## 次数约束
+    - 首次无结果时，可换 1–2 组不同关键词重试（合计不超过 3 次）；
+    - 仍不足时再依次尝试：judgment-search → pkulaw-case-semantic-search / pkulaw-case-keyword
+      → wk-mcp（威科先行）→ search_external（全网兜底，仅 1 次）。
     """
     started = time.perf_counter()
     clean_question = (question or "").strip()
@@ -495,7 +631,7 @@ async def search_case(question: str, top_k: int = 6) -> str:
             "search_case finished | question=%r | hits=%s | total=%.2fs",
             clean_question, len(items), time.perf_counter() - started,
         )
-        return "\n".join(lines)
+        return _cap_tool_output("\n".join(lines), "search_case")
 
     except Exception:
         logger.exception("search_case failed after %.2fs", time.perf_counter() - started)
@@ -509,7 +645,7 @@ async def search_case(question: str, top_k: int = 6) -> str:
 # search_reference：工具书/业务学习/操作指引检索（reference_library）——独立库
 # ---------------------------------------------------------------------------
 
-@mcp.tool()
+@_register
 async def search_reference(question: str, top_k: int = 6) -> str:
     """检索本地工具书、业务学习材料与操作指引/办案指南（Chroma 向量库 reference_library）。
 
@@ -558,7 +694,7 @@ async def search_reference(question: str, top_k: int = 6) -> str:
             "search_reference finished | question=%r | hits=%s | total=%.2fs",
             clean_question, len(items), time.perf_counter() - started,
         )
-        return "\n".join(lines)
+        return _cap_tool_output("\n".join(lines), "search_reference")
 
     except Exception:
         logger.exception("search_reference failed after %.2fs", time.perf_counter() - started)
@@ -587,7 +723,7 @@ def _get_chroma_admin_client():
     return _CHROMA_ADMIN_CLIENT
 
 
-@mcp.tool()
+@_register
 def chroma_status() -> str:
     """查看本地法律知识库（Chroma 向量库）的运行状态。
 
@@ -690,7 +826,7 @@ def chroma_status() -> str:
     return _json.dumps(result, ensure_ascii=False, indent=2)
 
 
-@mcp.tool()
+@_register
 def ingest_rebuild(
     libraries: Optional[List[str]] = None,
     limit: Optional[int] = None,
@@ -754,7 +890,7 @@ def ingest_rebuild(
     return _json.dumps(result, ensure_ascii=False, indent=2)
 
 
-@mcp.tool()
+@_register
 def search_external(
     question: str,
     max_results: int = 5,
@@ -803,17 +939,18 @@ def search_external(
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
-def read_document(file_path: str, max_chars: int = 100_000) -> str:
-    """读取文档文件并返回提取的纯文本内容。
+def read_document(file_path: str, offset: int = 0, max_chars: int = 4000) -> str:
+    """读取文档文件并返回提取的纯文本内容（分页返回，避免单次输出撑爆上下文）。
 
     支持 PDF（含扫描件 OCR）、Word(.doc/.docx)、PowerPoint(.ppt/.pptx)、
     Excel(.xls/.xlsx)、HTML(.html/.htm)、图片(.png/.jpg 等，OCR 识别)、
     纯文本(.txt/.md)。
 
     Args:
-        file_path: 文件绝对路径（必填）。仅限已授权目录：
-            /Users/simon/Documents/1-Work 与 law-search/uploads。
-        max_chars: 返回文本的最大字符数（默认 100,000，超出截断）。
+        file_path: 文件绝对路径（必填）。仅限 config/path_config.py 中
+            ALLOWED_ROOTS 授权的目录。
+        offset: 起始字符偏移（默认 0）。
+        max_chars: 单次返回的最大字符数（默认 4000，上限 8000）。
     """
     import json as _json
     from core.contract_review import extract_text
@@ -838,19 +975,24 @@ def read_document(file_path: str, max_chars: int = 100_000) -> str:
 
     try:
         text, meta = extract_text(real_path)
+        total = len(text)
+        start = max(0, int(offset))
+        page = max(1, min(int(max_chars), 8_000))
         meta["file"] = real_path
-        meta["chars"] = len(text)
+        meta["chars"] = total
+        meta["offset"] = start
+        meta["max_chars"] = page
+        segment = text[start:start + page]
 
-        # 按调用方指定的 max_chars 截断
-        if len(text) > max_chars:
+        if start > 0 or len(segment) < total:
             meta["truncated"] = True
-            meta["orig_chars"] = len(text)
-            text = text[:max_chars]
+            meta["orig_chars"] = total
+            meta["next_offset"] = start + len(segment)
 
-        result = {"text": text, "metadata": meta}
+        result = {"text": segment, "metadata": meta}
         logger.info(
-            "read_document | file=%s | chars=%s | truncated=%s | %.2fs",
-            real_path, len(text), meta.get("truncated", False),
+            "read_document | file=%s | total=%s | returned=%s | offset=%s | %.2fs",
+            real_path, total, len(segment), start,
             time.perf_counter() - started,
         )
         return _json.dumps(result, ensure_ascii=False, indent=2)
@@ -896,34 +1038,123 @@ def _ensure_delivery_dir() -> Path:
 
 
 def _build_file_url(filename: str) -> str:
-    """构建外部可达的文件 URL。"""
-    return f"{_EXTERNAL_BASE}/files/{filename}"
+    """构建外部可达的文件 URL（支持 case_id 子目录）。"""
+    from urllib.parse import quote
+
+    return f"{_EXTERNAL_BASE}/files/{quote(filename, safe='/')}"
 
 
-@mcp.tool()
+@_register
+def open_case(case_id: str, source_docs: str = "") -> str:
+    """登记一个案件会话（默认 24 小时有效）。
+
+    正式交付前必须调用本工具。同一 case_id 在 TTL 内可复用；过期后必须
+    新建 case_id，避免旧案件上下文污染新任务。
+
+    Args:
+        case_id: 案件标识，例如 2026-1026-京03民终13295。
+        source_docs: 该案件的源文件绝对路径，多个用逗号或换行分隔。
+    """
+    import json as _json
+
+    from core.case_registry import open_case as _open_case
+
+    result = _open_case(case_id, source_docs)
+    logger.info("open_case | case_id=%s | status=%s", case_id, result.get("status"))
+    return _json.dumps(result, ensure_ascii=False, indent=2)
+
+
+def _prepare_case(case_id: str, source_docs: str) -> dict:
+    """校验/登记案件；空 case_id 表示 draft，不做正式交付门禁。"""
+    from core.case_registry import (
+        check_case,
+        open_case as _open_case,
+    )
+
+    case_id = (case_id or "").strip()
+    if not case_id:
+        if (source_docs or "").strip():
+            return {
+                "ok": False,
+                "status": "blocked",
+                "message": "提供了 source_docs 但缺少 case_id；正式交付必须登记案件",
+            }
+        return {"ok": True, "case_id": "", "status": "draft"}
+
+    if not (source_docs or "").strip():
+        return {
+            "ok": False,
+            "status": "blocked",
+            "message": "正式交付必须提供 source_docs，用于案号/日期/金额校验",
+        }
+
+    existing = check_case(case_id)
+    if existing and existing.get("status") != "active":
+        return {
+            "ok": False,
+            "status": "blocked",
+            "message": "案件会话已过期，请新建 case_id 会话后再交付",
+        }
+
+    registered = _open_case(case_id, source_docs)
+    if not registered.get("ok"):
+        return {
+            "ok": False,
+            "status": "blocked",
+            "message": registered.get("message", "案件登记失败"),
+        }
+
+    return {"ok": True, "case_id": case_id, "status": "active"}
+
+
+@_register
 def export_result(
     content: str,
     filename: str = "",
     format: str = "txt",
+    case_id: str = "",
+    source_docs: str = "",
 ) -> str:
     """将检索结果或任意文本导出为文件，返回可通过 Tailscale 直接访问的 URL。
 
-    文件自动写入 iCloud Drive 同步目录（~/SLP交付输出/），
-    在 iPhone「文件」App 中可预览，同时返回 URL 供聊天界面直接点击打开。
+    文件写入 iCloud Drive 同步目录（~/SLP交付输出/<case_id>/），
+    正式交付必须提供 case_id 和 source_docs；交付前会校验案号、日期、金额。
 
     Args:
         content: 要导出的文本内容（必填）。
         filename: 文件名（不含扩展名）。留空则自动生成时间戳文件名。
         format: 文件格式，支持 txt / md / html（默认 txt）。
+        case_id: 案件标识；为空时按 draft 导出，不做正式交付校验。
+        source_docs: 源文件绝对路径，多个用逗号/换行分隔。
     """
     import json as _json
     import re as _re
     from datetime import datetime
 
+    from core.delivery_gate import (
+        case_dir_for,
+        quarantine_dir_for,
+        verify_delivery,
+        write_manifest,
+    )
+    from core.observability import record_tool
+
     started = time.perf_counter()
 
     if not content or not content.strip():
         return "内容为空，无需导出。"
+
+    case = _prepare_case(case_id, source_docs)
+    if not case["ok"]:
+        return _json.dumps(
+            {
+                "status": "blocked",
+                "reason": case["message"],
+                "case_id": case_id,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
 
     fmt = (format or "txt").lower().strip()
     if fmt not in ("txt", "md", "html"):
@@ -931,62 +1162,142 @@ def export_result(
 
     if not filename or not filename.strip():
         filename = f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    # 清理文件名：只保留中文、字母、数字、下划线、连字符
     filename = _re.sub(r"[^\w\u4e00-\u9fff\-]", "_", filename).strip("_") or "export"
 
     delivery_dir = _ensure_delivery_dir()
+    case_dir, safe_case = case_dir_for(delivery_dir, case["case_id"])
     full_name = f"{filename}.{fmt}"
-    file_path = delivery_dir / full_name
+    file_path = case_dir / full_name
 
-    # 处理重名：自动追加序号
     counter = 1
     while file_path.exists():
         full_name = f"{filename}_{counter}.{fmt}"
-        file_path = delivery_dir / full_name
+        file_path = case_dir / full_name
         counter += 1
 
     try:
         file_path.write_text(content, encoding="utf-8")
-        url = _build_file_url(full_name)
-        elapsed = time.perf_counter() - started
+        verification = verify_delivery(file_path, source_docs)
 
+        if verification["status"] == "blocked":
+            quarantine = quarantine_dir_for(delivery_dir, safe_case)
+            blocked_path = quarantine / full_name
+            file_path.replace(blocked_path)
+            manifest = write_manifest(
+                quarantine,
+                case_id=safe_case,
+                deliverable=blocked_path,
+                source_docs=source_docs,
+                verification=verification,
+                tool="export_result",
+                status="blocked",
+            )
+            record_tool(
+                tool="export_result",
+                status="blocked",
+                case_id=safe_case,
+                total_ms=(time.perf_counter() - started) * 1000,
+                delivery_status="blocked",
+                extra={"mismatches": verification["mismatches"]},
+            )
+            logger.warning(
+                "export_result blocked | case=%s | mismatches=%s",
+                safe_case,
+                verification["mismatches"],
+            )
+            return _json.dumps(
+                {
+                    "status": "blocked",
+                    "case_id": safe_case,
+                    "reason": "交付前事实校验未通过",
+                    "mismatches": verification["mismatches"],
+                    "warnings": verification["warnings"],
+                    "quarantine_path": str(blocked_path),
+                    "manifest": str(manifest),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        manifest = write_manifest(
+            case_dir,
+            case_id=safe_case,
+            deliverable=file_path,
+            source_docs=source_docs,
+            verification=verification,
+            tool="export_result",
+            status="delivered",
+        )
+        url = _build_file_url(f"{safe_case}/{full_name}")
+        elapsed = time.perf_counter() - started
         result = {
             "status": "ok",
+            "case_id": safe_case,
             "filename": full_name,
             "path": str(file_path),
             "url": url,
             "size_bytes": len(content.encode("utf-8")),
+            "verification": verification["status"],
+            "warnings": verification["warnings"],
+            "manifest": str(manifest),
             "elapsed_s": round(elapsed, 3),
             "icloud_sync": "文件已写入 iCloud Drive 目录，iPhone 可在「文件」App 中查看",
         }
+        record_tool(
+            tool="export_result",
+            status="ok",
+            case_id=safe_case,
+            total_ms=elapsed * 1000,
+            delivery_status="delivered",
+        )
         logger.info(
-            "export_result | file=%s | size=%s | %.3fs",
-            full_name, result["size_bytes"], elapsed,
+            "export_result | case=%s | file=%s | verify=%s | %.3fs",
+            safe_case, full_name, verification["status"], elapsed,
         )
         return _json.dumps(result, ensure_ascii=False, indent=2)
 
     except Exception as exc:
         logger.exception("export_result error | file=%s", full_name)
+        record_tool(
+            tool="export_result",
+            status="error",
+            case_id=case.get("case_id"),
+            total_ms=(time.perf_counter() - started) * 1000,
+            error=type(exc).__name__,
+        )
         return f"导出失败：{exc}"
 
 
-@mcp.tool()
-def deliver_file(file_path: str, filename: str = "") -> str:
-    """将已生成的任意格式文件（docx/pptx/xlsx/pdf 等）交付到输出目录，保持原格式不变。
+@_register
+def deliver_file(
+    file_path: str,
+    filename: str = "",
+    case_id: str = "",
+    source_docs: str = "",
+) -> str:
+    """将已生成的任意格式文件（docx/pptx/xlsx/pdf 等）交付到案件目录。
 
-    文件复制到 iCloud Drive 同步目录（~/SLP交付输出/），
-    在 iPhone「文件」App 中可预览，同时返回 URL 供聊天界面直接点击打开或下载。
-
-    适用场景：工作任务已生成 docx/pptx/xlsx/pdf 等文件，需要跨设备查看时，
-    直接交付原文件，不做任何格式转换。
+    文件复制到 iCloud Drive 同步目录（~/SLP交付输出/<case_id>/），
+    正式交付必须提供 case_id 和 source_docs；交付前会校验案号、日期、金额，
+    不一致时进入 _quarantine 并返回 blocked。
 
     Args:
         file_path: 源文件的绝对路径（必填）。
         filename: 交付后的文件名（含扩展名）。留空则沿用源文件名。
+        case_id: 案件标识；为空时按 draft 交付，不做正式校验。
+        source_docs: 源文件绝对路径，多个用逗号/换行分隔。
     """
     import json as _json
     import re as _re
     import shutil
+
+    from core.delivery_gate import (
+        case_dir_for,
+        quarantine_dir_for,
+        verify_delivery,
+        write_manifest,
+    )
+    from core.observability import record_tool
 
     started = time.perf_counter()
 
@@ -998,53 +1309,132 @@ def deliver_file(file_path: str, filename: str = "") -> str:
     if not src_path.is_file():
         return f"文件不存在：{src_path}"
 
-    # 文件名：默认沿用源文件名；自定义时校验合法性并保留扩展名
+    case = _prepare_case(case_id, source_docs)
+    if not case["ok"]:
+        return _json.dumps(
+            {
+                "status": "blocked",
+                "reason": case["message"],
+                "case_id": case_id,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
     if filename and filename.strip():
         base = _re.sub(r"[^\w\u4e00-\u9fff\-]", "_", filename.strip()).strip("_") or "file"
-        suffix = src_path.suffix  # 扩展名强制取源文件，防止格式错配
+        suffix = src_path.suffix
         full_name = f"{base}{suffix}"
     else:
         full_name = src_path.name
 
     delivery_dir = _ensure_delivery_dir()
-    dest_path = delivery_dir / full_name
+    case_dir, safe_case = case_dir_for(delivery_dir, case["case_id"])
+    dest_path = case_dir / full_name
 
-    # 同名不同内容时自动加序号（同名同内容则视为重复交付，直接返回现有 URL）
     counter = 1
     while dest_path.exists():
         if dest_path.stat().st_size == src_path.stat().st_size:
-            break  # 同名同大小 → 大概率同一文件，直接复用
+            break
         stem, suf = dest_path.stem, dest_path.suffix
-        dest_path = delivery_dir / f"{stem}_{counter}{suf}"
+        dest_path = case_dir / f"{stem}_{counter}{suf}"
         counter += 1
 
     try:
         if not dest_path.exists():
             shutil.copy2(src_path, dest_path)
 
-        url = _build_file_url(dest_path.name)
+        verification = verify_delivery(dest_path, source_docs)
+
+        if verification["status"] == "blocked":
+            quarantine = quarantine_dir_for(delivery_dir, safe_case)
+            blocked_path = quarantine / dest_path.name
+            dest_path.replace(blocked_path)
+            manifest = write_manifest(
+                quarantine,
+                case_id=safe_case,
+                deliverable=blocked_path,
+                source_docs=source_docs,
+                verification=verification,
+                tool="deliver_file",
+                status="blocked",
+            )
+            record_tool(
+                tool="deliver_file",
+                status="blocked",
+                case_id=safe_case,
+                total_ms=(time.perf_counter() - started) * 1000,
+                delivery_status="blocked",
+                extra={"mismatches": verification["mismatches"]},
+            )
+            logger.warning(
+                "deliver_file blocked | case=%s | file=%s | mismatches=%s",
+                safe_case, dest_path.name, verification["mismatches"],
+            )
+            return _json.dumps(
+                {
+                    "status": "blocked",
+                    "case_id": safe_case,
+                    "reason": "交付前事实校验未通过",
+                    "mismatches": verification["mismatches"],
+                    "warnings": verification["warnings"],
+                    "quarantine_path": str(blocked_path),
+                    "manifest": str(manifest),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        manifest = write_manifest(
+            case_dir,
+            case_id=safe_case,
+            deliverable=dest_path,
+            source_docs=source_docs,
+            verification=verification,
+            tool="deliver_file",
+            status="delivered",
+        )
+        url = _build_file_url(f"{safe_case}/{dest_path.name}")
         elapsed = time.perf_counter() - started
         size = dest_path.stat().st_size
 
         result = {
             "status": "ok",
+            "case_id": safe_case,
             "filename": dest_path.name,
             "source": str(src_path),
             "delivered_path": str(dest_path),
             "url": url,
             "size_bytes": size,
             "format": dest_path.suffix.lstrip(".") or "unknown",
+            "verification": verification["status"],
+            "warnings": verification["warnings"],
+            "manifest": str(manifest),
             "elapsed_s": round(elapsed, 3),
             "icloud_sync": "文件已复制到 iCloud Drive 目录（原格式不变），iPhone 可在「文件」App 中查看",
         }
+        record_tool(
+            tool="deliver_file",
+            status="ok",
+            case_id=safe_case,
+            total_ms=elapsed * 1000,
+            delivery_status="delivered",
+        )
         logger.info(
-            "deliver_file | %s -> %s | size=%s | %.3fs",
-            src_path, dest_path.name, size, elapsed,
+            "deliver_file | case=%s | %s -> %s | verify=%s | size=%s | %.3fs",
+            safe_case, src_path, dest_path.name, verification["status"], size, elapsed,
         )
         return _json.dumps(result, ensure_ascii=False, indent=2)
 
     except Exception as exc:
         logger.exception("deliver_file error | src=%s", src_path)
+        record_tool(
+            tool="deliver_file",
+            status="error",
+            case_id=case.get("case_id"),
+            total_ms=(time.perf_counter() - started) * 1000,
+            error=type(exc).__name__,
+        )
         return f"交付失败：{exc}"
 
 
@@ -1194,7 +1584,11 @@ if __name__ == "__main__":
     import uvicorn
 
     if args.transport == "http":
-        mcp_app = mcp.http_app(transport="http")
+        # stateless_http：不维护 MCP 会话。工具调用可能耗时 60s+，客户端超时
+        # 取消请求会触发 mcp 库 "Request already responded to" 断言并崩溃会话，
+        # 之后同一 Mcp-Session-Id 的调用全部返回 "Session not found"。
+        # 无状态模式下每次请求独立处理，取消不再污染后续调用。
+        mcp_app = mcp.http_app(transport="http", stateless_http=True)
         endpoint = f"http://{args.host}:{args.port}/mcp"
         if actual_token:
             # 注意：lifespan 必须显式传入外层 Starlette，否则 SessionManager task group

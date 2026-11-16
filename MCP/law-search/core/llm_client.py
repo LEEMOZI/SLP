@@ -62,7 +62,12 @@ from config import (
     LLM_PROVIDER_SOFT_TIMEOUT_SEC,
     LLM_TEMPERATURE,
     LLM_TOTAL_TIMEOUT_SEC,
+    LOCAL_SOFT_TIMEOUT_TIERS,
+    MAX_SINGLE_PROMPT_TOKENS,
+    PROMPT_CHUNK_THRESHOLD_TOKENS,
+    TOKEN_ESTIMATE_SAFETY_FACTOR,
 )
+from core.map_reduce import run_map_reduce
 
 logger = logging.getLogger("law-search.llm")
 
@@ -162,19 +167,28 @@ class BaseLLMProvider:
             - 本地模型 / DeepSeek tokenizer 不统一
 
         对中文法律文本而言：
-            约 1 token ≈ 1~2 中文字符
+            实测约 1.47 字符/token（2026-10-26 64K/128K A/B 基准）
 
         这里使用保守估算：
-            max(len(prompt) // 2, len(prompt) // 4)
+            中文法律文本按 2 字符/token，英文/代码按 4 字符/token，
+            再乘 TOKEN_ESTIMATE_SAFETY_FACTOR（1.5），
+            避免低估长 prompt 导致本地 128K 撞上下文。
 
-        实际 Router 主要使用字符阈值，因此这里只作为辅助。
+        Router 的路由阈值、动态软超时和 map-reduce 分段都依赖这个估算。
         """
 
         if not prompt:
             return 0
 
-        # 一个相对保守、简单的估算。
-        return max(1, len(prompt) // 2)
+        cjk = sum(
+            1
+            for ch in prompt
+            if "\u4e00" <= ch <= "\u9fff"
+        )
+        non_cjk = len(prompt) - cjk
+
+        raw = cjk / 2 + non_cjk / 4
+        return max(1, int(raw * TOKEN_ESTIMATE_SAFETY_FACTOR))
 
     # ------------------------------------------------------------------
     # Model Selection
@@ -300,8 +314,19 @@ class BaseLLMProvider:
         return {}
 
     # ------------------------------------------------------------------
+    # Thinking switch
+    # ------------------------------------------------------------------
+
+    def prepare_user_content(self, prompt: str) -> str:
+        """Provider 可在此改写 user 内容（默认原样返回）。"""
+        return prompt
+
+    # ------------------------------------------------------------------
     # Shared Request Building
     # ------------------------------------------------------------------
+
+    def ensure_model_ready(self, model: str) -> None:
+        """请求前保证 model 已驻留。默认无操作；本地 Provider 覆盖。"""
 
     def _prepare_request(
         self,
@@ -311,8 +336,20 @@ class BaseLLMProvider:
         max_tokens: Optional[int],
         task_type_hint: Optional[str],
         force_model: Optional[str],
+        quality: bool = False,
     ) -> Tuple[str, Dict[str, Any]]:
-        """构建 (model, kwargs)。chat_completion 与 chat_completion_stream 共用。"""
+        """构建 (model, kwargs)。chat_completion 与 chat_completion_stream 共用。
+
+        quality=True：本地 Provider 优先使用质量模型（config.long_context_model），
+        由 Provider 自行换驻留（见 LMStudioLocalProvider.ensure_model_ready）。
+        """
+
+        # quality 只在本地 Provider 有意义；其它 Provider 没有 long_context_model，
+        # 配置里取不到值即退化为原行为。
+        if quality and not force_model:
+            force_model = self.config.get(
+                "long_context_model"
+            )
 
         prompt_len_chars = len(prompt or "")
 
@@ -321,6 +358,8 @@ class BaseLLMProvider:
             task_type_hint,
             force_model,
         )
+
+        self.ensure_model_ready(model)
 
         kwargs: Dict[str, Any] = {
             "model": model,
@@ -331,7 +370,7 @@ class BaseLLMProvider:
                 },
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": self.prepare_user_content(prompt),
                 },
             ],
             "max_tokens": (
@@ -389,11 +428,13 @@ class BaseLLMProvider:
         max_tokens: Optional[int] = None,
         task_type_hint: Optional[str] = None,
         force_model: Optional[str] = None,
+        quality: bool = False,
     ) -> str:
 
         started = time.perf_counter()
 
         prompt_len_chars = len(prompt or "")
+        prompt_tokens = self.estimate_prompt_tokens(prompt)
 
         model, kwargs = self._prepare_request(
             prompt,
@@ -401,6 +442,7 @@ class BaseLLMProvider:
             max_tokens=max_tokens,
             task_type_hint=task_type_hint,
             force_model=force_model,
+            quality=quality,
         )
 
         try:
@@ -447,6 +489,15 @@ class BaseLLMProvider:
                 elapsed_ms,
             )
 
+            self._record_run(
+                model=model,
+                prompt_tokens=prompt_tokens,
+                output_chars=len(content),
+                total_ms=elapsed_ms,
+                status="ok",
+                task_type=task_type_hint,
+            )
+
             return content
 
         except Exception as exc:
@@ -471,25 +522,83 @@ class BaseLLMProvider:
                 exc_info=True,
             )
 
+            self._record_run(
+                model=model,
+                prompt_tokens=prompt_tokens,
+                output_chars=0,
+                total_ms=elapsed_ms,
+                status="error",
+                task_type=task_type_hint,
+                error=type(exc).__name__,
+            )
+
             raise
 
     # ------------------------------------------------------------------
     # Streaming Completion
     # ------------------------------------------------------------------
 
-    def _stream_read_timeout_sec(self) -> float:
-        """流式读超时：相邻 chunk / 首 token 之间的最大静默秒数。
+    def soft_timeout_sec(self, prompt_tokens: int = 0) -> float:
+        """单 Provider 软超时。
 
-        复用该 provider 的软超时配置（LLM_PROVIDER_SOFT_TIMEOUT_SEC）——
-        语义与 P1-2(a) 一致：静默超过 soft_sec 视为挂死。
-        健康的长流式生成只要 chunk 间隔正常，就不会被误杀。
+        本地 128K prefill 约 220s，固定 90s 会提前掐断，因此本地按
+        prompt token 规模分级；其他 Provider 继续使用配置值。
         """
+        if self.provider_id == "lm_studio_local":
+            for limit, seconds in LOCAL_SOFT_TIMEOUT_TIERS:
+                if prompt_tokens <= limit:
+                    return float(seconds)
+            return 600.0
+
         raw = LLM_PROVIDER_SOFT_TIMEOUT_SEC.get(self.provider_id)
         try:
             v = float(raw) if raw else 0.0
         except (TypeError, ValueError):
             v = 0.0
         return v if v > 0 else 120.0
+
+    def _stream_read_timeout_sec(self, prompt_tokens: int = 0) -> float:
+        """流式读超时：相邻 chunk / 首 token 之间的最大静默秒数。
+
+        与软超时同源，按 prompt 规模动态计算。
+        健康的长流式生成只要 chunk 间隔正常，就不会被误杀。
+        """
+        return self.soft_timeout_sec(prompt_tokens)
+
+    def _record_run(
+        self,
+        *,
+        model: str,
+        prompt_tokens: int,
+        output_chars: int,
+        total_ms: float,
+        status: str,
+        ttft_ms: Optional[float] = None,
+        task_type: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        """写入 P1 观测库；失败不能影响主流程。"""
+        try:
+            from core.observability import record_run
+
+            record_run(
+                kind="llm",
+                provider=self.provider_id,
+                model=model,
+                prompt_tokens=prompt_tokens,
+                output_tokens=(output_chars // 2) if output_chars else 0,
+                total_ms=total_ms,
+                status=status,
+                ttft_ms=ttft_ms,
+                task_type=task_type,
+                error=error,
+            )
+        except Exception:
+            logger.debug(
+                "Observability record failed | provider=%s",
+                self.provider_id,
+                exc_info=True,
+            )
 
     def chat_completion_stream(
         self,
@@ -499,6 +608,7 @@ class BaseLLMProvider:
         max_tokens: Optional[int] = None,
         task_type_hint: Optional[str] = None,
         force_model: Optional[str] = None,
+        quality: bool = False,
     ) -> Generator[str, None, None]:
         """流式补全：逐段 yield 文本增量（仅 content，跳过 reasoning 段）。
 
@@ -512,10 +622,12 @@ class BaseLLMProvider:
             max_tokens=max_tokens,
             task_type_hint=task_type_hint,
             force_model=force_model,
+            quality=quality,
         )
 
         kwargs["stream"] = True
-        kwargs["timeout"] = self._stream_read_timeout_sec()
+        prompt_tokens = self.estimate_prompt_tokens(prompt)
+        kwargs["timeout"] = self._stream_read_timeout_sec(prompt_tokens)
 
         started = time.perf_counter()
         first_at: Optional[float] = None
@@ -575,6 +687,17 @@ class BaseLLMProvider:
                 exc_info=True,
             )
 
+            self._record_run(
+                model=model,
+                prompt_tokens=prompt_tokens,
+                output_chars=total_chars,
+                total_ms=(time.perf_counter() - started) * 1000,
+                status="error",
+                ttft_ms=(first_at * 1000) if first_at is not None else None,
+                task_type=task_type_hint,
+                error=type(exc).__name__,
+            )
+
             raise
 
         logger.info(
@@ -589,6 +712,16 @@ class BaseLLMProvider:
             f"{first_at:.2f}s" if first_at is not None else "N/A",
             total_chars,
             time.perf_counter() - started,
+        )
+
+        self._record_run(
+            model=model,
+            prompt_tokens=prompt_tokens,
+            output_chars=total_chars,
+            total_ms=(time.perf_counter() - started) * 1000,
+            status="ok",
+            ttft_ms=(first_at * 1000) if first_at is not None else None,
+            task_type=task_type_hint,
         )
 
 
@@ -606,7 +739,8 @@ class LMStudioLocalProvider(
         http://localhost:1234/v1
 
     当前生产模型：
-        qwen/qwen3.8-27b
+        主力  qwen/qwen3.6-35b-a3b（MoE 35B-A3B，128K）
+        备用  qwen/qwen3.8-27b（复杂任务 / 质量兜底）
     """
 
     provider_id = "lm_studio_local"
@@ -630,6 +764,50 @@ class LMStudioLocalProvider(
                 "enable_thinking": bool(flag),
             }
         }
+
+    def prepare_user_content(self, prompt: str) -> str:
+        """Qwen3 系列：仅靠 enable_thinking=false 会被 LM Studio 忽略，
+        必须在 user 内容末尾追加 /no_think 才能真正关闭思维链。
+        （2026-10-26 实测：disable 后仍持续输出 reasoning_content。）
+        """
+        if self.config.get("enable_thinking", False):
+            return prompt
+        if prompt.rstrip().endswith("/no_think"):
+            return prompt
+        return f"{prompt}\n/no_think"
+
+    def ensure_model_ready(self, model: str) -> None:
+        """64GB 下两个 Qwen 无法同时 128K 常驻，请求前按需卸载/加载。
+
+        LM Studio 的内存护栏会直接拒绝加载第二个模型（HTTP 400），
+        不会自动换出已驻留模型，因此这里必须显式换驻留。
+        """
+        if not self.config.get("auto_swap", True):
+            return
+
+        ctx = int(
+            self.config.get("capabilities", {}).get(
+                "max_context_tokens", 131072
+            )
+        )
+
+        try:
+            from core.lmstudio_control import ensure_model_loaded
+
+            if ensure_model_loaded(model, ctx):
+                logger.info(
+                    "LM Studio auto-swap done | provider=%s | model=%s",
+                    self.provider_id,
+                    model,
+                )
+        except Exception as exc:
+            # 换模失败不在这里中断：让实际请求去暴露真实错误。
+            logger.warning(
+                "LM Studio auto-swap failed | provider=%s | model=%s | %s",
+                self.provider_id,
+                model,
+                exc,
+            )
 
 
 # ============================================================================
@@ -895,8 +1073,21 @@ class LLMProviderRouter:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _provider_soft_timeout_sec(self, provider_id: str) -> Optional[int]:
-        """读取单 Provider 软超时（0/None/False → 关闭）。"""
+    def _provider_soft_timeout_sec(
+        self,
+        provider_id: str,
+        prompt_tokens: int = 0,
+    ) -> Optional[int]:
+        """读取单 Provider 软超时（0/None/False → 关闭）。
+
+        本地 128K 按 prompt 规模分级；其他 Provider 用配置值。
+        """
+        if provider_id == "lm_studio_local":
+            for limit, seconds in LOCAL_SOFT_TIMEOUT_TIERS:
+                if prompt_tokens <= limit:
+                    return int(seconds)
+            return 600
+
         raw = self._soft_timeout_sec_map.get(provider_id)
         if not raw:
             return None
@@ -905,6 +1096,35 @@ class LLMProviderRouter:
         except (TypeError, ValueError):
             return None
         return v if v > 0 else None
+
+    @staticmethod
+    def _local_only_model(
+        provider_id: str,
+        force_model: Optional[str],
+    ) -> Optional[str]:
+        """force_model 只对本地 Provider 有意义：云端没有同名模型 id。"""
+        if force_model and provider_id != "lm_studio_local":
+            return None
+        return force_model
+
+    def _resolve_quality_model(
+        self,
+        force_model: Optional[str],
+        quality: bool,
+    ) -> Optional[str]:
+        """quality=True 且未显式指定模型时，使用本地质量模型（27B）。
+
+        非本地 Provider 的 force_model 会在 _call_with_soft_timeout 中被丢弃，
+        所以这里可以安全地统一解析。
+        """
+        if not quality or force_model:
+            return force_model
+
+        return (
+            self._provider_configs.get(
+                "lm_studio_local", {}
+            ).get("long_context_model")
+        )
 
     def _call_with_soft_timeout(
         self,
@@ -927,7 +1147,18 @@ class LLMProviderRouter:
             我们只关心第一个返回的有效结果。
           - 软超时设为 None / 0 → 退化为直接同步调用（完全和原行为一致）。
         """
-        soft_sec = self._provider_soft_timeout_sec(provider_id)
+        # force_model 只对本地 Provider 有意义：云端 Provider 没有该模型 id。
+        force_model = self._local_only_model(
+            provider_id, force_model
+        )
+
+        prompt_tokens = BaseLLMProvider.estimate_prompt_tokens(
+            prompt
+        )
+        soft_sec = self._provider_soft_timeout_sec(
+            provider_id,
+            prompt_tokens,
+        )
         if soft_sec is None:
             return instance.chat_completion(
                 prompt,
@@ -1074,39 +1305,108 @@ class LLMProviderRouter:
             "deepseek_api",
         )
 
-        threshold = int(
+        cloud_required = set(
             self.auto_route.get(
-                "short_prompt_chars",
-                8000,
+                "cloud_required_task_types",
+                [],
             )
         )
 
+        short_limit = int(
+            self.auto_route.get(
+                "short_prompt_tokens",
+                48_000,
+            )
+        )
+
+        hard_limit = int(
+            self.auto_route.get(
+                "hard_prompt_tokens",
+                100_000,
+            )
+        )
+
+        chunk_limit = int(
+            self.auto_route.get(
+                "chunk_prompt_tokens",
+                PROMPT_CHUNK_THRESHOLD_TOKENS,
+            )
+        )
+
+        prompt_tokens = BaseLLMProvider.estimate_prompt_tokens(
+            prompt
+        )
+
+        if prompt_tokens > MAX_SINGLE_PROMPT_TOKENS:
+            logger.error(
+                "Prompt tokens %s exceed single-request hard limit %s; "
+                "please chunk the task.",
+                prompt_tokens,
+                MAX_SINGLE_PROMPT_TOKENS,
+            )
+
+        elif prompt_tokens > chunk_limit:
+            logger.warning(
+                "Prompt tokens %s exceed chunk threshold %s; "
+                "long-context cloud will be used, consider map-reduce.",
+                prompt_tokens,
+                chunk_limit,
+            )
+
         # --------------------------------------------------------------
-        # 1. Explicit long task
+        # 1. Explicit long task / cloud-required task
         # --------------------------------------------------------------
 
         if (
             task_type_hint
-            and task_type_hint in long_types
+            and (
+                task_type_hint in long_types
+                or task_type_hint in cloud_required
+            )
         ):
 
             candidate = long_id
 
         # --------------------------------------------------------------
-        # 2. Prompt length
+        # 2. Prompt tokens: hard limit -> cloud
         # --------------------------------------------------------------
 
-        elif len(prompt or "") >= threshold:
+        elif prompt_tokens > hard_limit:
 
             candidate = long_id
 
         # --------------------------------------------------------------
-        # 3. Normal short task
+        # 3. Short prompt -> local
+        # --------------------------------------------------------------
+
+        elif prompt_tokens <= short_limit:
+
+            candidate = short_id
+
+        # --------------------------------------------------------------
+        # 4. Medium prompt: local only if 128K actually configured
         # --------------------------------------------------------------
 
         else:
 
-            candidate = short_id
+            local_cfg = self._provider_configs.get(
+                short_id,
+                {},
+            )
+            local_ctx = int(
+                local_cfg.get(
+                    "capabilities",
+                    {},
+                ).get(
+                    "max_context_tokens",
+                    0,
+                )
+            )
+            candidate = (
+                short_id
+                if local_ctx >= 131_072
+                else long_id
+            )
 
         # --------------------------------------------------------------
         # Candidate enabled?
@@ -1179,7 +1479,7 @@ class LLMProviderRouter:
         # 1. 调用方显式指定
         # --------------------------------------------------------------
 
-        if provider_hint:
+        if provider_hint and provider_hint != "auto":
 
             return (
                 provider_hint,
@@ -1254,6 +1554,85 @@ class LLMProviderRouter:
         return order
 
     # ------------------------------------------------------------------
+    # Map-Reduce for oversized prompts
+    # ------------------------------------------------------------------
+
+    def _map_reduce(
+        self,
+        prompt: str,
+        *,
+        prompt_tokens: int,
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        task_type_hint: Optional[str],
+        provider_hint: Optional[str],
+        force_model: Optional[str],
+    ) -> str:
+        """prompt 超过 chunk 阈值时自动分段：map 抽取要点 → reduce 出答案。"""
+        long_id = self.auto_route.get("long_provider", "deepseek_api")
+
+        # 400K+ 已超出本地 128K 上下文，默认走云端长上下文 Provider。
+        if provider_hint and provider_hint != "auto":
+            map_provider = provider_hint
+        elif self._is_enabled(long_id):
+            map_provider = long_id
+        else:
+            map_provider = "auto"
+
+        def _call(chunk_prompt: str, **kwargs) -> str:
+            # 禁用递归 map-reduce：分段一定小于阈值。
+            return self.chat_completion(
+                chunk_prompt,
+                enable_map_reduce=False,
+                **kwargs,
+            )
+
+        result = run_map_reduce(
+            prompt,
+            _call,
+            task_type_hint=task_type_hint,
+            provider_hint=map_provider,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            force_model=force_model,
+        )
+
+        logger.info(
+            "Map-reduce completed | prompt_tokens=%s | chunks=%s | "
+            "levels=%s | degraded=%s | provider=%s | elapsed=%.1fs",
+            prompt_tokens,
+            result.chunks,
+            result.levels,
+            result.degraded,
+            map_provider,
+            result.elapsed_s,
+        )
+
+        try:
+            from core.observability import record_run
+
+            record_run(
+                kind="map_reduce",
+                provider=map_provider,
+                prompt_tokens=prompt_tokens,
+                output_tokens=BaseLLMProvider.estimate_prompt_tokens(
+                    result.text
+                ),
+                total_ms=result.elapsed_s * 1000,
+                status="degraded" if result.degraded else "ok",
+                task_type=task_type_hint,
+                extra={
+                    "chunks": result.chunks,
+                    "levels": result.levels,
+                    "degraded": result.degraded,
+                },
+            )
+        except Exception:
+            logger.debug("Map-reduce observability failed", exc_info=True)
+
+        return result.text
+
+    # ------------------------------------------------------------------
     # Main Completion
     # ------------------------------------------------------------------
 
@@ -1266,11 +1645,43 @@ class LLMProviderRouter:
         task_type_hint: Optional[str] = None,
         provider_hint: Optional[str] = None,
         force_model: Optional[str] = None,
+        enable_map_reduce: Optional[bool] = None,
+        quality: bool = False,
     ) -> str:
+
+        force_model = self._resolve_quality_model(
+            force_model, quality
+        )
 
         overall_started = (
             time.perf_counter()
         )
+
+        plain_tokens = BaseLLMProvider.estimate_prompt_tokens(
+            prompt
+        )
+
+        chunk_limit = int(
+            self.auto_route.get(
+                "chunk_prompt_tokens",
+                PROMPT_CHUNK_THRESHOLD_TOKENS,
+            )
+        )
+
+        if (
+            enable_map_reduce is not False
+            and plain_tokens > chunk_limit
+        ):
+
+            return self._map_reduce(
+                prompt,
+                prompt_tokens=plain_tokens,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                task_type_hint=task_type_hint,
+                provider_hint=provider_hint,
+                force_model=force_model,
+            )
 
         main_id, _ = (
             self.select_provider(
@@ -1429,6 +1840,8 @@ class LLMProviderRouter:
         provider_hint: Optional[str] = None,
         force_model: Optional[str] = None,
         on_delta: Optional[Callable[[str], None]] = None,
+        enable_map_reduce: Optional[bool] = None,
+        quality: bool = False,
     ) -> str:
         """流式补全：复用 fallback 链，返回完整文本；on_delta 逐段回调（预览用途）。
 
@@ -1437,10 +1850,47 @@ class LLMProviderRouter:
         - 注意：若某 provider 在输出中途失败，已通过 on_delta 推送的
           「中途增量」与最终返回文本可能不一致（预览语义）。
           最终答案以返回值为准（管线层 Guard 基于完整文本校验）。
+        - 超长 prompt 走 map-reduce 时无法逐 token 流式，最终结果一次性
+          通过 on_delta 回调（预览语义降级为“完成后推送全文”）。
         """
+        force_model = self._resolve_quality_model(
+            force_model, quality
+        )
         overall_started = (
             time.perf_counter()
         )
+
+        plain_tokens = BaseLLMProvider.estimate_prompt_tokens(
+            prompt
+        )
+
+        chunk_limit = int(
+            self.auto_route.get(
+                "chunk_prompt_tokens",
+                PROMPT_CHUNK_THRESHOLD_TOKENS,
+            )
+        )
+
+        if (
+            enable_map_reduce is not False
+            and plain_tokens > chunk_limit
+        ):
+
+            text = self._map_reduce(
+                prompt,
+                prompt_tokens=plain_tokens,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                task_type_hint=task_type_hint,
+                provider_hint=provider_hint,
+                force_model=force_model,
+            )
+            if on_delta:
+                try:
+                    on_delta(text)
+                except Exception:
+                    logger.debug("on_delta callback failed", exc_info=True)
+            return text
 
         main_id, _ = (
             self.select_provider(
@@ -1506,7 +1956,10 @@ class LLMProviderRouter:
                     task_type_hint=(
                         task_type_hint
                     ),
-                    force_model=force_model,
+                    # force_model 只对本地 Provider 有意义
+                    force_model=self._local_only_model(
+                        pid, force_model
+                    ),
                 ):
                     pieces.append(piece)
 
@@ -1627,6 +2080,7 @@ def chat_completion(
     prompt,
     temperature: Optional[float] = 0.2,
     max_tokens: Optional[int] = 1200,
+    quality: bool = False,
 ):
     """
     与旧版完全兼容。
@@ -1650,6 +2104,7 @@ def chat_completion(
         prompt,
         temperature=temperature,
         max_tokens=max_tokens,
+        quality=quality,
     )
 
 
@@ -1658,6 +2113,7 @@ def chat_completion_stream(
     on_delta: Optional[Callable[[str], None]] = None,
     temperature: Optional[float] = 0.2,
     max_tokens: Optional[int] = 1200,
+    quality: bool = False,
 ):
     """
     与 chat_completion 相同路由语义的流式版本。
@@ -1672,4 +2128,5 @@ def chat_completion_stream(
         temperature=temperature,
         max_tokens=max_tokens,
         on_delta=on_delta,
+        quality=quality,
     )

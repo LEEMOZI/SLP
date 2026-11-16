@@ -381,8 +381,8 @@ const inject = ['sessions'];
  *
  * @param {object} ctx — Cordis Context
  */
-async function apply(ctx) {
-  const pluginConfig = (ctx.config && ctx.config['session-storage-fs']) || {};
+async function apply(ctx, pluginConfig) {
+  pluginConfig = pluginConfig || {}; // 0.2.2-rc.1: config 由 apply 第二参数注入
   const logLevel = pluginConfig.logLevel || DEFAULT_LOG_LEVEL;
   const logger = createLogger(logLevel);
 

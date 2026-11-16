@@ -63,14 +63,38 @@ HASH_INDEX_FILE = os.path.join(
 # 文件访问授权目录（read_document / contract_review 共用）
 # ==========================================================================
 
-# DSH Desktop 工作区：用户在对话中上传的文件会被拷贝到
+# DSH Desktop 旧上传区（历史兼容；当前工作区已迁移到 2-WorkSpace）
+# 用户在对话中上传的文件可能被拷贝到
 # .dsh-uploads/session-<uuid>/<16位hash>-<原文件名>（原路径文件可能已不存在）
 DSH_WORKSPACE_ROOT = "/Users/simon/Documents/1-SLP/DSH WorkSpace"
 DSH_UPLOADS_ROOT = os.path.join(DSH_WORKSPACE_ROOT, ".dsh-uploads")
 
-# 允许访问的根目录：工作台上传区 + law-search 项目区 + 用户工作区
+# 实际工作区与 Cherry Studio 上传目录
+WORKSPACE_ROOT = "/Users/simon/Documents/2-WorkSpace"
+CHERRY_FILES_ROOT = os.path.expanduser(
+    "~/Library/Application Support/CherryStudio/Data/Files"
+)
+
+# 环境变量可追加授权目录（os.pathsep 分隔），便于不同机器部署
+_EXTRA_ALLOWED_ROOTS = tuple(
+    os.path.expanduser(p.strip())
+    for p in os.environ.get("LAW_SEARCH_ALLOWED_ROOTS", "").split(os.pathsep)
+    if p.strip()
+)
+
+# 允许访问的根目录：实际工作区 + Cherry 上传区 + law-search 项目区 + DSH 旧上传区
 ALLOWED_ROOTS: tuple = (
-    "/Users/simon/Documents/1-Work",
+    WORKSPACE_ROOT,
+    CHERRY_FILES_ROOT,
     "/Users/simon/Documents/1-SLP/MCP/law-search",
     DSH_UPLOADS_ROOT,
-)
+) + _EXTRA_ALLOWED_ROOTS
+
+
+def validate_allowed_roots() -> tuple:
+    """返回不存在或不可读的授权目录，供服务启动时告警。"""
+    return tuple(
+        root
+        for root in ALLOWED_ROOTS
+        if not os.path.isdir(root) or not os.access(root, os.R_OK)
+    )

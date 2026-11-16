@@ -1,6 +1,6 @@
 {
   "_schema_source": "model_router.json 是本项目私有配置（非 MCP 官方 server.json），无公开 schema。请勿添加 $schema 字段——此前指向 https://developer.harness.io/3k-docs/... 为 404，会触发 DSH / IDE '无法从 https://develope...' 拉取失败。修改时间 2026-08-30。",
-  "_comment": "DeepSeek Harness Model Provider 路由规则。【真相源声明】模型与 Provider 的唯一真相源是 law-search/config/llm_config.py；本文件是 Harness 侧只读镜像，用于展示/注册，禁止在此单边修改 enabled/model/base_url 等运行值。修改流程：先改 config/llm_config.py，再同步本镜像。上次同步：2026-08-30（双工作台架构）——LM Studio 工作台负责法律检索/案例检索/合同审查/法律分析（local→deepseek auto 路由）；Bionic 工作台负责案卷材料分析/法律文书起草（secure_cloud 优先，deepseek 兜底）。",
+  "_comment": "DeepSeek Harness Model Provider 路由规则。【真相源声明】模型与 Provider 的唯一真相源是 law-search/config/llm_config.py；本文件是 Harness 侧只读镜像，用于展示/注册，禁止在此单边修改 enabled/model/base_url 等运行值。修改流程：先改 config/llm_config.py，再同步本镜像。上次同步：2026-10-26（本地模型调整）——主力 qwen/qwen3.6-35b-a3b（35B-A3B MoE），复杂任务/质量备用 qwen/qwen3.8-27b，视觉/英文备用 google/gemma-4-31b-qat；已移除 Bonsai 27B 与 Muse Glimmer。",
   "version": "1.1.0",
   "default_strategy": "auto",
   "providers": {
@@ -10,15 +10,16 @@
       "priority": 1,
       "base_url": "http://localhost:1234/v1",
       "api_key": "lm-studio",
-      "default_model": "qwen/qwen3.8-27b",
+      "default_model": "qwen/qwen3.6-35b-a3b",
+      "long_context_model": "qwen/qwen3.8-27b",
       "compatible_models": [
+        "qwen/qwen3.6-35b-a3b",
         "qwen/qwen3.8-27b",
-        "google/gemma-4-31b-qat",
-        "prism-ml/bonsai-27b",
-        "meta/muse-glimmer"
+        "google/gemma-4-31b-qat"
       ],
       "capabilities": {
-        "max_context_tokens": 32768,
+        "max_context_tokens": 131072,
+        "max_output_tokens": 8192,
         "tool_calls": true,
         "streaming": true
       },
@@ -114,14 +115,14 @@
     }
   },
   "routing_rules": {
-    "_comment": "对齐 llm_config.AUTO_ROUTE：阈值是 prompt 字符数（short_prompt_chars=8000），不是 token 数。双工作台分工：lm_studio_workbench = 法律检索/案例检索/合同审查/法律分析；bionic_workbench = 案卷材料分析/法律文书起草。",
+    "_comment": "对齐 llm_config.AUTO_ROUTE：阈值是 prompt token 数（已按实测 1.47 字符/token 校准，估算系数 1.5）。48K 以下本地；48K–100K 本地 128K 可接则本地；100K 以上云端；400K 以上 map-reduce 分段。双工作台分工：lm_studio_workbench = 法律检索/案例检索/合同审查/法律分析；bionic_workbench = 案卷材料分析/法律文书起草。",
     "auto": [
       {
-        "if": "prompt_chars < 8000 AND task_type IN [short_legal_search, simple_legal_question, code_refactor, local_debug]",
+        "if": "prompt_tokens <= 48000 AND task_type IN [short_legal_search, simple_legal_question, code_refactor, local_debug]",
         "then": ["lm_studio_local", "deepseek_api"]
       },
       {
-        "if": "prompt_chars >= 8000 OR task_type IN [contract_review_long, legal_analysis, case_research_long, research_report, legal_opinion, case_analysis, complex_legal_analysis, long_document_review]",
+        "if": "prompt_tokens > 48000 OR task_type IN [contract_review_long, legal_analysis, case_research_long, research_report, legal_opinion, case_analysis, complex_legal_analysis, long_document_review]",
         "then": ["deepseek_api", "lm_studio_local"]
       }
     ],
@@ -130,8 +131,8 @@
     "bionic_workbench_preferred": ["lm_studio_bionic_secure_cloud", "deepseek_api", "lm_studio_local"]
   },
   "global": {
-    "total_timeout_sec": 600,
+    "total_timeout_sec": 900,
     "temperature": 0.2,
-    "max_tokens": 4096
+    "max_tokens": 8192
   }
 }

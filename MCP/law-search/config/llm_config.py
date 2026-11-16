@@ -133,25 +133,37 @@ LLM_PROVIDER = (
 AUTO_ROUTE = {
 
     # ------------------------------------------------------------------------
-    # Prompt 字符数阈值
+    # Prompt token 阈值
     #
-    # < 8000
-    #     -> 本地 LM Studio
+    # <= 48K
+    #     -> 本地 LM Studio 128K
     #
-    # >= 8000
+    # 48K ~ 100K
+    #     -> 本地 128K 可接则本地，否则 DeepSeek
+    #
+    # > 100K
     #     -> DeepSeek
     #
-    # 注意：
-    # 这里是字符数，不是假装成 token 数。
+    # 说明：这里使用保守 token 估算，不再用字符数硬编码。
     # ------------------------------------------------------------------------
 
-    "short_prompt_chars": 8000,
+    "short_prompt_tokens": 48_000,
+
+    "hard_prompt_tokens": 100_000,
+
+    "chunk_prompt_tokens": 400_000,
 
     "short_provider":
         "lm_studio_local",
 
     "long_provider":
         "deepseek_api",
+
+    # 这些任务即使 token 不大，也优先走云端长上下文模型。
+    "cloud_required_task_types": [
+        "research_report",
+        "complex_legal_analysis",
+    ],
 
     # ------------------------------------------------------------------------
     # 明确属于复杂法律任务的类型
@@ -177,9 +189,10 @@ AUTO_ROUTE = {
 # search_law 等工具的内部答案生成为机器内 Step（结果进入工具返回值），
 # 不是用户界面的最终生成（界面生成由 DSH/LM Studio 的主模型承担）。
 #
-# MAC Studio 已部署 qwen/qwen3.8-27b（32k ctx），本地推理质量足够，
-# 优先走 lm_studio_local 省云端费用；本地失败时 fallback 到 deepseek_api。
-INTERNAL_GENERATION_PROVIDER = "lm_studio_local"
+# MAC Studio 主力为 qwen/qwen3.6-35b-a3b（128K ctx），复杂任务备用
+# qwen/qwen3.8-27b。内部生成也必须遵守 token 预算：短任务本地，长任务云端。
+# "auto" 表示交给 Auto Route，不再强制本地。
+INTERNAL_GENERATION_PROVIDER = "auto"
 
 
 # ============================================================================
@@ -218,19 +231,19 @@ LLM_FALLBACK_CHAIN = [
 # 这是整个 Router 的总预算。
 # Provider 自身也有 timeout_sec。
 #
-LLM_TOTAL_TIMEOUT_SEC = 600
+LLM_TOTAL_TIMEOUT_SEC = 900
 
 # P1-2 (a)：单 Provider 软超时（秒）
 #
 # 本系统 fallback_chain = [lm_studio_local, deepseek_api]。
-# 本地小模型（LM Studio 4b）首次推理 / embedding 装载慢，给 90s 软上限；
-# 一旦超过 soft_sec，会在「已发请求仍继续但主流程切换 fallback」的语义下
-# 让 DeepSeek 立即接力（wall-clock 用户感知从 96+s → 30-50s 级别）。
+# 本地 128K prefill 约 220s，固定 90s 会提前掐断。
+# llm_client 会按 prompt token 规模使用 LOCAL_SOFT_TIMEOUT_TIERS 动态计算；
+# 这里的值是拿不到 prompt 规模时的兜底。
 #
 # 0 / False / None → 关闭软超时（仅用 Provider 级 timeout_sec 做硬取消）。
 LLM_PROVIDER_SOFT_TIMEOUT_SEC = {
-    "lm_studio_local": 90,
-    "deepseek_api":      90,
+    "lm_studio_local": 300,
+    "deepseek_api":      300,
     "bionic_secure_cloud": 120,
     "lm_link":            120,
 }
@@ -241,7 +254,7 @@ LLM_PROVIDER_SOFT_TIMEOUT_SEC = {
 
 LLM_TEMPERATURE = 0.2
 
-LLM_MAX_TOKENS = 4096
+LLM_MAX_TOKENS = 8192
 
 
 # ============================================================================
@@ -270,29 +283,45 @@ LM_STUDIO_LOCAL = {
         None,
 
     # ------------------------------------------------------------------------
-    # 当前本地默认模型（MAC Studio 2026-10-09 已下载）
-    #   默认: qwen/qwen3.8-27b（中文法律推理最佳）
-    #   备选: google/gemma-4-31b-qat, prism-ml/bonsai-27b, meta/muse-glimmer
+    # 当前本地模型配置（MAC Studio 2026-10-26 同步）
+    #   主力: qwen/qwen3.6-35b-a3b（MoE 35B-A3B，Agent 循环最快）
+    #   复杂任务/质量备用: qwen/qwen3.8-27b（稠密 27B，深度推理）
+    #   视觉/英文备用: google/gemma-4-31b-qat
+    #
+    # 27B 仅在命中 AUTO_ROUTE.long_task_types 或显式 force_model 时启用，
+    # 避免日常工具循环在 A3B / 27B 之间反复换模。
+    # 注意：64GB 统一内存下两个 Qwen 不能同时以 128K 常驻。
     # ------------------------------------------------------------------------
 
     "default_model":
+        "qwen/qwen3.6-35b-a3b",
+
+    # 复杂法律任务的本地质量备用。SLP 内部生成默认不传 task_type_hint，
+    # 因此日常检索/审查仍走 A3B；只有显式复杂任务或云端失败回落到本地时
+    # 才使用 27B。
+    "long_context_model":
         "qwen/qwen3.8-27b",
 
+    # 请求质量模型（27B）前是否自动卸载当前驻留的另一个 Qwen 再加载。
+    # LM Studio 的内存护栏不会自动换出模型，而是直接拒绝加载（HTTP 400），
+    # 所以 64GB 机器上不主动卸载就无法真正用上 27B。默认开启。
+    "auto_swap":
+        True,
+
     "compatible_models": [
+        "qwen/qwen3.6-35b-a3b",
         "qwen/qwen3.8-27b",
         "google/gemma-4-31b-qat",
-        "prism-ml/bonsai-27b",
-        "meta/muse-glimmer",
     ],
 
     # ------------------------------------------------------------------------
-    # 本地模型能力（27B+ 大模型，32k 上下文）
+    # 本地模型能力（27B+ 大模型，128K 上下文）
     # ------------------------------------------------------------------------
 
     "capabilities": {
 
         "max_context_tokens":
-            32768,
+            131072,
 
         "tool_calls":
             True,
@@ -322,7 +351,7 @@ LM_STUDIO_LOCAL = {
         False,
 
     "timeout_sec":
-        600,
+        900,
 
     "use_for": [
         "code_refactor",

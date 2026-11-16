@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLP 法律工作台｜产品架构与 PRD</title>
+<style>
+:root{--ink:#172033;--muted:#657086;--line:#dfe4ec;--paper:#f5f7fb;--card:#fff;--navy:#15263f;--blue:#255fca;--cyan:#0c7c86;--gold:#a66a12;--red:#b42318;--green:#18794e;--shadow:0 12px 35px rgba(21,38,63,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}a{color:var(--blue);text-decoration:none}button,input,select,textarea{font:inherit}.layout{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1540px;margin:auto}.side{position:sticky;top:0;height:100vh;padding:30px 22px;background:var(--navy);color:#dbe5f3;overflow:auto}.brand{font-weight:750;font-size:20px;letter-spacing:.04em;color:#fff}.brand small{display:block;font-size:11px;font-weight:500;color:#93a8c4;margin-top:5px;letter-spacing:.12em}.side nav{margin-top:28px}.side a{display:block;color:#b9c9dc;padding:7px 10px;border-radius:7px;font-size:13px}.side a:hover{background:#213752;color:#fff}.side .group{margin:20px 10px 5px;color:#7189a7;font-size:11px;letter-spacing:.12em}.main{min-width:0;padding:42px 52px 80px}.hero{background:linear-gradient(135deg,#15263f,#214a70);color:white;border-radius:18px;padding:38px 42px;box-shadow:var(--shadow);margin-bottom:28px}.eyebrow{font-size:12px;letter-spacing:.14em;color:#8ed4d8;text-transform:uppercase}.hero h1{font-size:34px;line-height:1.3;margin:10px 0 12px}.hero p{max-width:850px;color:#d7e4ef;margin:0}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;background:#e8eef8;color:#39516e}.hero .pill{background:rgba(255,255,255,.12);color:#eaf3fb}section{scroll-margin-top:20px;margin:34px 0}h2{font-size:25px;line-height:1.4;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #ccd7e6}h3{font-size:19px;margin:28px 0 10px}h4{font-size:16px;margin:20px 0 8px}p{margin:8px 0}.lead{font-size:17px;color:#34435a}.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;box-shadow:0 3px 12px rgba(21,38,63,.03);margin:14px 0}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.decision{border-left:4px solid var(--cyan);background:#edf8f8;padding:14px 18px;border-radius:0 10px 10px 0;margin:14px 0}.warn{border-left-color:var(--gold);background:#fff8e9}.danger{border-left-color:var(--red);background:#fff2f0}.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:2px 7px;letter-spacing:.04em}.p0{background:#e7f0ff;color:#255fca}.p1{background:#e7f6f1;color:#18794e}.p2{background:#fff2d9;color:#96600d}.p3{background:#eee9f8;color:#69519b}.tbd{background:#fff0e5;color:#a34b16;font-weight:650;padding:1px 5px;border-radius:4px}table{width:100%;border-collapse:collapse;background:#fff;margin:12px 0;font-size:13px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#edf1f7;color:#394a61;font-weight:700}tr:nth-child(even) td{background:#fbfcfe}ul,ol{padding-left:22px}li{margin:4px 0}.req{border-top:1px solid var(--line);padding-top:16px}.req h3{margin-top:4px}.reqid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--blue);font-size:13px;font-weight:700}.flow{display:flex;align-items:stretch;gap:8px;overflow:auto;padding:12px 0}.flow .step{min-width:140px;flex:1;background:#fff;border:1px solid #cdd8e6;border-radius:10px;padding:13px;text-align:center}.flow .step b{display:block;color:#214a70}.flow .arrow{align-self:center;color:#7a8aa0}.arch{display:grid;gap:10px}.arch-layer{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff}.arch-layer h4{margin:0 0 8px}.boxes{display:flex;gap:8px;flex-wrap:wrap}.box{background:#eef3fa;border:1px solid #d6e0ed;border-radius:7px;padding:7px 11px;font-size:13px}.arch-note{color:var(--muted);font-size:12px;margin-top:7px}.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f5;border-radius:4px;padding:1px 5px;font-size:12px}.small{font-size:12px;color:var(--muted)}.toc-columns{columns:2}.checklist{list-style:none;padding:0}.checklist li:before{content:"✓";color:var(--green);font-weight:800;margin-right:8px}.prototype{border:2px solid #b9cbe2;border-radius:15px;overflow:hidden;background:#fff;margin:18px 0}.proto-head{background:#172b45;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center}.proto-head h3{margin:0;font-size:16px}.proto-actions{display:flex;gap:6px;flex-wrap:wrap}.proto-actions button,.btn{border:1px solid #c4d0df;background:#fff;color:#263d59;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px}.proto-actions button:hover,.btn:hover{border-color:var(--blue);color:var(--blue)}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{color:var(--red)}.health{padding:8px 16px;background:#e9f7ef;color:#146c43;font-size:12px}.health.bad{background:#fff0e8;color:#a43c18}.proto-body{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:520px}.case-list{border-right:1px solid var(--line);background:#f7f9fc;padding:14px 10px}.case-list h4{margin:0 6px 10px;font-size:13px}.case-item{padding:10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:5px}.case-item.active{background:#dfeaff;color:#1e55aa}.case-item small{display:block;color:var(--muted)}.workspace{padding:16px;min-width:0}.tabs{display:flex;gap:3px;border-bottom:1px solid var(--line);margin-bottom:15px;flex-wrap:wrap}.tab{border:0;background:none;padding:8px 11px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}.pane{display:none}.pane.active{display:block}.searchbar{display:grid;grid-template-columns:1fr 120px auto;gap:8px}.searchbar input,.searchbar select,.field input,.field textarea{border:1px solid #cbd5e2;border-radius:7px;padding:8px 10px;background:#fff;width:100%}.result{border:1px solid var(--line);border-radius:9px;padding:12px;margin:10px 0;cursor:pointer}.result:hover{border-color:#8aa9d2}.result b{color:#244b78}.result .source{font-size:11px;color:var(--cyan);margin-bottom:3px}.result .quote{font-size:12px;color:#56657a;margin-top:5px}.cite{color:var(--blue);cursor:pointer;text-decoration:underline;margin:0 3px}.split{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px}.source-panel{background:#f5f8fc;border:1px solid var(--line);border-radius:9px;padding:12px;font-size:12px}.summary{border:1px solid #bad8d3;background:#f2faf8;border-radius:10px;padding:14px;margin-top:12px}.summary h4{margin:0 0 6px}.file-row,.task-row,.version-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 5px;border-bottom:1px solid #e7ebf1;font-size:13px}.status{font-size:11px;padding:2px 7px;border-radius:99px;background:#edf1f5;color:#526176;white-space:nowrap}.status.ok{background:#e6f5ed;color:#18794e}.status.run{background:#e7f0ff;color:#255fca}.status.fail{background:#ffebe8;color:#b42318}.status.part{background:#fff2d9;color:#96600d}.progress{height:6px;background:#e6ebf2;border-radius:9px;overflow:hidden;margin:8px 0}.progress i{display:block;height:100%;background:var(--blue);width:35%;transition:width .4s}.toast{position:fixed;right:24px;bottom:24px;background:#172b45;color:#fff;padding:11px 16px;border-radius:8px;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}.footer{margin-top:45px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.side{display:none}.main{padding:25px}.grid3{grid-template-columns:1fr}.split{grid-template-columns:1fr}.proto-body{grid-template-columns:1fr}.case-list{border-right:0;border-bottom:1px solid var(--line)}.case-item{display:inline-block}.searchbar{grid-template-columns:1fr}.hero h1{font-size:27px}}
+@media print{body{background:#fff}.side,.proto-actions,.btn,.tabs{display:none}.layout{display:block}.main{padding:0}.hero{box-shadow:none}.card,.prototype{break-inside:avoid}.pane{display:block!important}.proto-body{display:block}.case-list{display:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="brand">SLP Legal Workbench<small>PRODUCT ARCHITECTURE + PRD</small></div>
+  <nav>
+    <div class="group">产品决策</div>
+    <a href="#background">01 背景与目标</a>
+    <a href="#contract">02 产品契约</a>
+    <a href="#scope">03 版本范围</a>
+    <a href="#architecture">04 产品架构</a>
+    <a href="#model">05 产品模型与核心流程</a>
+    <div class="group">需求与原型</div>
+    <a href="#p0">06 P0 功能需求</a>
+    <a href="#prototype">07 可点击原型</a>
+    <a href="#later">08 P1–P3 需求</a>
+    <a href="#rules">09 共享规则与异常</a>
+    <a href="#nfr">10 非功能要求</a>
+    <a href="#open">11 待决策事项</a>
+  </nav>
+</aside>
+<main class="main">
+<header class="hero">
+  <div class="eyebrow">Review Draft · v0.9 · 2026-11-14</div>
+  <h1>SLP 法律工作台<br>产品架构与产品需求文档</h1>
+  <p>把已有法律检索、裁判文书检索、文档解析、模型路由与交付能力，封装为以案件为中心、结论可溯源、任务可恢复、系统可持续升级的可视化产品。</p>
+  <div class="meta"><span class="pill">Web MVP 优先</span><span class="pill">Tauri 桌面版后续</span><span class="pill">本地数据优先</span><span class="pill">保留 MCP 高级客户端</span></div>
+</header>
+
+<section id="background">
+<h2>01 背景与目标</h2>
+<p class="lead">SLP 已具备可用的事务能力，但入口分散在 DSH、Cherry Studio、WorkBuddy 等通用客户端中。用户需要理解工具名、模型名和调用顺序，案件材料、检索证据、生成内容与交付版本之间也缺少统一的可视化关系。</p>
+<div class="grid2">
+  <div class="card"><h3>已确认的现状</h3><ul>
+    <li>已有法规、参考案例、合同模板、业务指南和大规模裁判文书检索能力。</li>
+    <li>已有文档读取、合同审查、诉讼文书生成、证据评价和结果交付能力。</li>
+    <li>已有本地主力模型、复杂任务质量备用模型、视觉/英文备用模型及云端路由。</li>
+    <li>已有案件标识、任务观测、长文本分段、交付校验和 launchd 常驻服务。</li>
+    <li>Mac Studio 承担算力与数据，MacBook 作为瘦客户端。</li>
+  </ul></div>
+  <div class="card"><h3>需要解决的产品问题</h3><ul>
+    <li>从“模型调用工具”转为“用户完成法律工作”，隐藏工具编排细节。</li>
+    <li>以案件聚合材料、任务、证据、摘要和交付版本。</li>
+    <li>长任务可查看进度、取消、重试，部分失败不丢失已完成成果。</li>
+    <li>模型生成内容与检索证据明确分离，关键结论可回到原文。</li>
+    <li>程序、配置、模型与知识数据可独立升级，升级不破坏用户工作。</li>
+  </ul></div>
+</div>
+<div class="decision"><b>核心产品决策：</b>第一版不做另一个聊天窗口，而做“案件工作台 + 统一任务中心 + 引用溯源”。通用 MCP 客户端继续保留，但不再是唯一操作入口。</div>
+<h3>产品目标</h3>
+<ul class="checklist">
+  <li>用户能在一个案件内完成材料准备、法规/类案检索、研究摘要和导出。</li>
+  <li>每条进入研究摘要的关键事实都能区分“检索证据”与“模型归纳”。</li>
+  <li>检索超时、解析失败或服务不可用后，用户能保留输入并恢复工作。</li>
+  <li>后续桌面化和版本升级不改变案件、证据与交付对象的统一含义。</li>
+</ul>
+</section>
+
+<section id="contract">
+<h2>02 产品契约</h2>
+<table>
+<tr><th>契约项</th><th>定义</th></tr>
+<tr><td>主要用户</td><td>使用 SLP 的律师/法律从业者。P0 为单用户产品，不引入团队角色和跨用户权限。</td></tr>
+<tr><td>核心任务</td><td>围绕一个案件，获得可核验的法规与类案研究结果，并将人工复核后的内容保存或导出。</td></tr>
+<tr><td>启动条件</td><td>用户创建或打开案件；可直接提出法律问题，也可先上传案件材料。</td></tr>
+<tr><td>完成条件</td><td>研究结果已保存到案件，且导出物包含来源清单、任务信息和人工编辑后的正文。</td></tr>
+<tr><td>核心共享对象</td><td><b>案件</b>。材料、检索任务、研究摘要和交付版本均归属于案件；跨案件的通用设置单独管理。</td></tr>
+<tr><td>信任边界</td><td>检索原文是证据；模型生成文字是辅助研究草稿。草稿不能直接标记为“已核验”，必须由用户确认。</td></tr>
+<tr><td>恢复承诺</td><td>失败任务保留输入、参数和错误；重试产生新的执行记录，不覆盖上一次结果。</td></tr>
+</table>
+<div class="decision warn"><b>[Assumption, TBD]</b> P0 按个人本地工作台设计。若首个版本即需要多人共同编辑、客户隔离或组织权限，角色模型和案件共享流程需要重新评审。</div>
+</section>
+
+<section id="scope">
+<h2>03 版本范围</h2>
+<table>
+<tr><th>范围</th><th>包含的完整能力</th><th>边界</th></tr>
+<tr><td><span class="tag p0">P0 · Web MVP</span></td><td>系统就绪检查、案件管理、材料上传解析、法规/类案统一检索、任务中心、证据查看、研究摘要、保存与导出。</td><td>完成“进入案件 → 获得可溯源研究 → 导出并恢复失败”的最小闭环。</td></tr>
+<tr><td><span class="tag p1">P1 · 桌面工作台</span></td><td>合同审查、诉讼文书生成、证据评价、完整交付中心、模型与路由设置、知识库和诊断界面。</td><td>复用 P0 的案件、任务、证据和版本对象，不另建平行工作流。</td></tr>
+<tr><td><span class="tag p2">P2 · 可分发产品</span></td><td>安装器、服务自启、签名与自动更新、配置迁移、数据备份恢复、版本回滚。</td><td>模型与知识库作为独立数据包，不随每次程序升级重复分发。</td></tr>
+<tr><td><span class="tag p3">P3 · 团队能力</span></td><td>多用户、组织权限、案件共享、集中审计和远程算力节点。</td><td>只有出现真实团队使用需求后启动。</td></tr>
+</table>
+<p class="small">P0 不包含公网开放、多用户协作、在线支付、自动向第三方法院/客户系统提交文件，也不允许模型在无人工确认的情况下把草稿标记为最终法律意见。</p>
+</section>
+
+<section id="architecture">
+<h2>04 产品架构</h2>
+<h3>4.1 目标架构</h3>
+<div class="arch">
+  <div class="arch-layer"><h4>体验层｜同一套产品行为，不同外壳</h4><div class="boxes"><span class="box">Web 工作台（P0）</span><span class="box">Tauri 桌面壳（P1）</span><span class="box">浏览器瘦客户端</span><span class="box">DSH / Cherry / WorkBuddy（高级入口）</span></div><div class="arch-note">新工作台使用统一业务接口；MCP 继续服务通用 Agent 客户端。</div></div>
+  <div class="arch-layer"><h4>业务层｜面向用户对象，而非面向工具名</h4><div class="boxes"><span class="box">案件</span><span class="box">材料</span><span class="box">检索研究</span><span class="box">合同/文书</span><span class="box">任务中心</span><span class="box">证据与引用</span><span class="box">交付版本</span><span class="box">设置与审计</span></div></div>
+  <div class="arch-layer"><h4>能力适配层｜隔离外部能力变化</h4><div class="boxes"><span class="box">法规检索适配</span><span class="box">裁判文书适配</span><span class="box">文档解析适配</span><span class="box">模型路由适配</span><span class="box">交付校验适配</span></div><div class="arch-note">业务层只理解“主力/质量/视觉”等模型角色，不直接理解某个运行时命令。</div></div>
+  <div class="arch-layer"><h4>运行与数据层｜Mac Studio 算力主机</h4><div class="boxes"><span class="box">现有 SLP 核心能力</span><span class="box">本地模型运行时</span><span class="box">案件与任务数据</span><span class="box">向量知识库</span><span class="box">裁判文书库</span><span class="box">交付存储</span></div></div>
+</div>
+<h3>4.2 架构决策</h3>
+<table>
+<tr><th>决策</th><th>产品含义</th><th>升级约束</th></tr>
+<tr><td>统一业务入口</td><td>工作台不依赖 MCP 工具数量或名称；检索、任务和交付对用户保持连续。</td><td>业务接口版本化；旧高级客户端可继续通过 MCP 使用。</td></tr>
+<tr><td>案件为聚合根</td><td>任何材料、任务、摘要和交付都能回到所属案件。</td><td>跨模块只使用统一案件标识，不以客户端会话作为案件真相。</td></tr>
+<tr><td>模型角色化</td><td>用户选择“日常/质量优先/视觉”等角色，而不是记忆模型 ID。</td><td>更换 LM Studio、Ollama 或具体模型时，案件和任务记录仍保存当时实际模型快照。</td></tr>
+<tr><td>数据与程序分离</td><td>应用升级不重复下载模型或裁判文书库。</td><td>程序、配置、模型、知识数据分别有版本和兼容检查。</td></tr>
+<tr><td>证据与草稿分离</td><td>原文、定位、摘录独立于模型摘要保存。</td><td>模型升级不会改写已保存的证据；重新生成形成新摘要版本。</td></tr>
+<tr><td>任务可恢复</td><td>长检索和解析都有持久状态、阶段进度和执行记录。</td><td>重试不覆盖旧执行；部分完成结果可查看、可 narrowing 后继续。</td></tr>
+</table>
+<h3>4.3 独立升级域</h3>
+<div class="grid3">
+<div class="card"><h4>应用程序</h4><p>工作台与业务服务可升级；升级前检查数据兼容性，失败时不启动半升级状态。</p></div>
+<div class="card"><h4>用户配置</h4><p>路径、模型角色、检索偏好和交付设置随版本迁移；原配置保留可读的备份。</p></div>
+<div class="card"><h4>模型与知识数据</h4><p>独立更新和校验；更新中不可用的能力明确显示，不阻断已有案件和交付读取。</p></div>
+</div>
+<div class="decision danger"><b>回滚边界：</b>程序回滚不得删除或降级覆盖用户案件、证据和交付文件。若新版本数据不能被旧程序读取，产品必须阻止不兼容回滚并说明所需的数据备份，而不是静默打开。</div>
+</section>
+
+<section id="model">
+<h2>05 产品模型与核心流程</h2>
+<h3>5.1 对象与状态</h3>
+<table>
+<tr><th>对象</th><th>必要信息</th><th>状态/规则</th></tr>
+<tr><td>案件</td><td>名称、案由/类型、当事人备注、创建时间、归档状态</td><td>进行中 ↔ 已归档；归档默认只读，可解除归档。P0 不提供永久删除。</td></tr>
+<tr><td>材料</td><td>原文件名、类型、上传时间、解析状态、文本/页码可用性、来源任务</td><td>待解析 → 解析中 → 可用 / 部分可用 / 失败；原文件不可被生成任务改写。</td></tr>
+<tr><td>检索研究</td><td>问题、范围、过滤条件、命中证据、研究摘要、保存版本</td><td>一次检索可多次执行；只有用户保存后成为案件研究成果。</td></tr>
+<tr><td>任务</td><td>类型、所属案件、输入快照、阶段、进度、错误、执行记录</td><td>排队中 → 运行中 → 已完成 / 部分完成 / 失败 / 已取消。</td></tr>
+<tr><td>证据</td><td>来源类型、标题、定位信息、原文摘录、所属检索执行</td><td>不可被模型摘要覆盖；定位不可用时明确标注，不补造页码或段落。</td></tr>
+<tr><td>研究摘要</td><td>正文、引用关系、编辑状态、实际模型、生成任务、保存时间</td><td>模型草稿 → 人工编辑 → 已确认；重新生成创建新版本。</td></tr>
+<tr><td>交付版本</td><td>正文快照、来源清单、校验结果、文件格式、创建时间</td><td>导出后不可变；修改正文需创建新交付版本。</td></tr>
+</table>
+<h3>5.2 P0 核心流程</h3>
+<div class="flow">
+<div class="step"><b>创建/打开案件</b><span class="small">确定工作上下文</span></div><div class="arrow">→</div>
+<div class="step"><b>提问或上传材料</b><span class="small">保留输入快照</span></div><div class="arrow">→</div>
+<div class="step"><b>执行检索/解析</b><span class="small">任务可见、可取消</span></div><div class="arrow">→</div>
+<div class="step"><b>查看证据</b><span class="small">回到来源与原文</span></div><div class="arrow">→</div>
+<div class="step"><b>编辑研究摘要</b><span class="small">确认引用与表述</span></div><div class="arrow">→</div>
+<div class="step"><b>保存/导出</b><span class="small">形成不可变版本</span></div>
+</div>
+<p><b>最重要的恢复路径：</b>长检索只完成部分年份或某个服务失败时，页面保留问题、过滤条件和已返回证据，标记覆盖范围；用户可缩小范围重试，不需要重新创建案件或重传材料。</p>
+</section>
+
+<section id="p0">
+<h2>06 P0 功能需求</h2>
+
+<div class="req" id="fr01"><h3><span class="reqid">FR-01</span> 系统就绪与工作台首页</h3>
+<p><b>目的：</b>让用户在开始案件工作前知道哪些能力可用，避免把服务故障误解为“没有检索结果”。</p>
+<ul>
+<li><b>触发：</b>打开工作台、手动刷新状态，或任务返回服务不可用。</li>
+<li><b>处理：</b>汇总法规检索、裁判文书、文档解析、模型和交付能力的就绪状态；显示当前算力节点和模型角色，不要求用户理解端口或进程。</li>
+<li><b>结果：</b>全部就绪时进入案件列表；部分不可用时允许读取已有案件和交付，但禁用依赖故障能力的新任务，并说明原因。</li>
+<li><b>异常：</b>状态检查失败本身不得清空案件列表；提供重试和诊断信息入口。P0 只允许查看诊断，不提供进程自启按钮。</li>
+</ul></div>
+
+<div class="req" id="fr02"><h3><span class="reqid">FR-02</span> 案件管理</h3>
+<p><b>目的：</b>把所有后续工作绑定到明确案件，避免跨会话材料混用。</p>
+<ul>
+<li><b>触发：</b>用户创建案件、搜索/筛选案件、打开或归档案件。</li>
+<li><b>字段：</b>案件名称为必填；案由/类型、当事人备注为可选。案号可在后续补充，不作为创建前提。</li>
+<li><b>处理：</b>创建后进入案件工作台；列表显示名称、类型、最近活动、未完成任务数和归档状态。</li>
+<li><b>结果：</b>当前案件在材料、检索、任务和导出页面保持一致；切换案件不会把上一案件的草稿自动带入。</li>
+<li><b>归档：</b>归档需确认；归档案件默认可读，不可新建任务。解除归档后恢复。</li>
+<li><b>异常：</b>同名案件允许存在，但列表需用创建时间区分；未保存编辑离开案件时提示保存，不静默丢弃。</li>
+</ul></div>
+
+<div class="req" id="fr03"><h3><span class="reqid">FR-03</span> 案件材料上传与解析</h3>
+<p><b>目的：</b>把用户卷宗转化为可检索、可引用的案件证据。</p>
+<ul>
+<li><b>触发：</b>用户在材料页选择或拖入文件；P0 支持 PDF、DOCX、TXT、Markdown。扫描 PDF 在 OCR 能力可用时进入解析，不可用时明确提示。</li>
+<li><b>处理：</b>上传后立即显示材料记录和解析任务；计算文件指纹用于重复提醒。解析完成后记录可用文本、页码定位是否可用和失败原因。</li>
+<li><b>结果：</b>可用材料可进入检索上下文；用户能查看原文/解析文本及其定位。原材料不可被后续生成任务覆盖。</li>
+<li><b>重复：</b>发现相同文件时不自动合并，提示“已存在相同材料”，由用户选择仍上传或取消。</li>
+<li><b>异常：</b>加密、损坏、不支持或部分页面失败时保留原文件和错误说明；部分可用材料必须标注未覆盖范围。</li>
+</ul>
+<p class="small"><span class="tbd">[TBD]</span> 单文件大小、单案件文件数与扫描页数上限在性能验证后确定；界面必须在达到上限前说明，而不是上传后才报错。</p></div>
+
+<div class="req" id="fr04"><h3><span class="reqid">FR-04</span> 统一法规与类案检索</h3>
+<p><b>目的：</b>用户用法律问题检索，不需要决定底层调用哪个工具。</p>
+<ul>
+<li><b>触发：</b>在案件内输入问题并选择“自动 / 法规 / 类案”；可选择是否引用已上传材料。</li>
+<li><b>处理：</b>自动模式识别检索意图；类案默认使用裁判文书来源，指导案例仅作补充。自然语言问题可转换为关键词，但页面显示实际执行的检索词，允许用户修改。</li>
+<li><b>过滤：</b>类案支持年份、法院、案由；法规支持效力/主题过滤时，仅展示底层实际可用的条件，不显示无效过滤器。</li>
+<li><b>结果：</b>按法规、类案、业务参考分组；显示标题、来源、关键摘录、命中原因和可用过滤条件。部分匹配必须标注，不能伪装为完全命中。</li>
+<li><b>证据：</b>点击结果打开原文面板，显示已有定位信息；无页码时提供可用的案号/条款/段落定位，不生成虚假定位。</li>
+<li><b>空结果：</b>说明实际检索词和范围，提供可编辑的缩减关键词建议；不得把“未命中”表述为“法律没有规定”。</li>
+<li><b>超时：</b>保留部分证据并标记已覆盖范围，提供“缩小年份/法院/案由后重试”；重试形成新执行记录。</li>
+</ul></div>
+
+<div class="req" id="fr05"><h3><span class="reqid">FR-05</span> 统一任务中心</h3>
+<p><b>目的：</b>让检索、解析和生成长任务的执行状态可理解、可恢复。</p>
+<ul>
+<li><b>触发：</b>任何异步能力启动即创建任务；用户从案件或全局任务中心查看。</li>
+<li><b>展示：</b>任务类型、所属案件、当前阶段、已用时、模型角色（如适用）、进度说明和可执行操作。</li>
+<li><b>状态：</b>排队中、运行中、已完成、部分完成、失败、已取消；进度百分比仅在能真实计算时显示，否则显示阶段而不伪造百分比。</li>
+<li><b>取消：</b>仅排队中/运行中可操作，需确认；已经产生的部分结果保留并标为部分完成或已取消，不保证底层计算立即停止。</li>
+<li><b>重试：</b>失败、部分完成、已取消任务可重试；默认沿用输入快照，用户可修改范围。每次重试生成新的执行记录。</li>
+<li><b>异常：</b>服务重启或页面关闭后重新打开，任务记录仍存在；无法确认最终状态时显示“状态待恢复”，不得直接标记成功。</li>
+</ul></div>
+
+<div class="req" id="fr06"><h3><span class="reqid">FR-06</span> 证据查看与研究摘要</h3>
+<p><b>目的：</b>把检索证据转化为可编辑、可核验的研究草稿。</p>
+<ul>
+<li><b>触发：</b>用户在检索结果中选择证据并生成摘要，或从空白研究页手动编写。</li>
+<li><b>处理：</b>摘要引用只能指向本次案件内已选择的证据或材料；模型可组织语言，但引用标识必须对应真实证据。</li>
+<li><b>展示：</b>检索证据与模型归纳采用不同视觉标识；点击引用在旁边打开原文，不高亮不存在的来源。</li>
+<li><b>编辑：</b>用户可修改正文、删除引用、添加说明；删除证据时提示哪些摘要引用会失效。</li>
+<li><b>确认：</b>“确认研究摘要”只表示用户已复核当前版本，不表示系统给出最终法律结论；确认后仍可通过新版本继续修改。</li>
+<li><b>异常：</b>生成失败不丢失已选证据和已有正文；引用缺失或校验失败时阻止“已确认”状态，直到用户处理。</li>
+</ul></div>
+
+<div class="req" id="fr07"><h3><span class="reqid">FR-07</span> 保存、导出与交付版本</h3>
+<p><b>目的：</b>把人工确认的研究内容变成可追溯、可下载的案件成果。</p>
+<ul>
+<li><b>触发：</b>用户保存研究摘要或点击导出；P0 支持 Markdown 和 DOCX。</li>
+<li><b>处理：</b>导出时冻结正文、引用和来源清单，记录任务、实际模型、时间和校验结果。</li>
+<li><b>校验：</b>对正文中可识别的案号、日期、金额和引用执行现有交付检查；失败项必须列出具体位置。</li>
+<li><b>结果：</b>成功后生成不可变交付版本和下载入口；正文后续修改不会改动旧文件。</li>
+<li><b>异常：</b>校验失败默认不进入正式交付列表，用户可返回修正或明确选择“保留问题并导出草稿”，草稿文件和列表均需醒目标记。</li>
+</ul></div>
+</section>
+
+<section id="prototype">
+<h2>07 P0 可点击原型</h2>
+<p>以下原型覆盖 FR-01～FR-07 的主要界面和状态，用于评审对象关系与操作流程，不代表最终视觉稿。可切换服务异常、执行检索、查看引用、模拟上传、取消/重试任务和导出版本。</p>
+<div class="prototype">
+  <div class="proto-head"><h3>SLP 工作台 · 交互评审原型</h3><div class="proto-actions"><button onclick="setHealth(true)">正常状态</button><button onclick="setHealth(false)">服务异常</button><button onclick="resetDemo()">重置</button></div></div>
+  <div class="health" id="health">● 核心服务就绪｜算力节点：Mac Studio｜日常模型：A3B</div>
+  <div class="proto-body">
+    <div class="case-list"><h4>案件</h4><div class="case-item active" onclick="selectCase(this,'民间借贷纠纷')">民间借贷纠纷<small>2 个任务 · 刚刚</small></div><div class="case-item" onclick="selectCase(this,'信托损害赔偿研究')">信托损害赔偿研究<small>3 份材料 · 昨天</small></div><button class="btn" style="margin:10px 5px" onclick="toast('已创建空白案件（原型）')">＋ 新建案件</button></div>
+    <div class="workspace">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b id="caseTitle">民间借贷纠纷</b><span class="small">进行中</span></div>
+      <div class="tabs"><button class="tab active" data-tab="search" onclick="showTab('search',this)">法律检索</button><button class="tab" data-tab="files" onclick="showTab('files',this)">案件材料</button><button class="tab" data-tab="tasks" onclick="showTab('tasks',this)">任务中心</button><button class="tab" data-tab="delivery" onclick="showTab('delivery',this)">交付版本</button></div>
+      <div class="pane active" id="pane-search">
+        <div class="searchbar"><input id="query" value="民间借贷 利息 司法保护上限"><select><option>自动</option><option>法规</option><option>类案</option></select><button class="btn primary" onclick="runSearch()">检索</button></div>
+        <div class="small" id="searchMeta" style="margin:8px 0">实际检索词与覆盖范围将在执行后显示。</div>
+        <div id="searchResults" hidden>
+          <div class="split"><div>
+            <div class="result" onclick="showSource('law')"><div class="source">法规 · 完全命中</div><b>《中华人民共和国民法典》第六百八十条</b><div class="quote">禁止高利放贷，借款的利率不得违反国家有关规定……</div></div>
+            <div class="result" onclick="showSource('case')"><div class="source">类案 · 裁判文书</div><b>民间借贷利息争议参考判决</b><div class="quote">法院结合合同约定、实际履行及司法保护上限认定应付利息……</div></div>
+            <button class="btn primary" onclick="generateSummary()">基于已选证据生成研究摘要</button>
+            <div class="summary" id="summary" hidden><h4>研究摘要 <span class="status part">模型草稿</span></h4>现有检索证据表明，民间借贷利率约定需要结合司法保护规则审查<span class="cite" onclick="showSource('law')">[1]</span>。类案可用于核对裁判说理结构，但具体结论仍应结合合同与履行事实<span class="cite" onclick="showSource('case')">[2]</span>。<div style="margin-top:10px"><button class="btn" onclick="toast('草稿已进入人工编辑状态')">编辑</button> <button class="btn" onclick="showTab('delivery',document.querySelector('[data-tab=delivery]'))">保存并导出</button></div></div>
+          </div><div class="source-panel" id="sourcePanel"><b>来源原文</b><p class="small">点击检索结果或摘要引用，在此查看原文和定位。</p></div></div>
+        </div>
+        <div id="searchEmpty" class="decision warn" hidden>未找到完全匹配结果。请减少检索词或缩小范围；这不代表相关法律规则不存在。</div>
+      </div>
+      <div class="pane" id="pane-files"><button class="btn primary" onclick="uploadFile()">＋ 模拟上传材料</button><div id="fileList" style="margin-top:12px"><div class="file-row"><span>借款合同.pdf<br><small>PDF · 12 页 · 可定位</small></span><span class="status ok">可用</span></div><div class="file-row"><span>转账记录.docx<br><small>DOCX · 2 页</small></span><span class="status ok">可用</span></div></div></div>
+      <div class="pane" id="pane-tasks"><div class="task-row"><div style="flex:1"><b>类案检索</b><div class="small">覆盖 2021–2016 · 阶段：全文检索</div><div class="progress"><i id="taskProgress"></i></div></div><span class="status run" id="taskStatus">运行中</span><button class="btn danger" id="taskButton" onclick="taskAction()">取消</button></div><div class="task-row"><span>借款合同.pdf 解析<br><small>12/12 页 · 执行记录 #A-102</small></span><span class="status ok">已完成</span></div><div class="task-row"><span>研究摘要生成<br><small>引用校验未通过 · 输入已保留</small></span><span class="status fail">失败</span><button class="btn" onclick="toast('已用原输入创建新执行记录')">重试</button></div></div>
+      <div class="pane" id="pane-delivery"><button class="btn primary" onclick="exportVersion()">导出当前研究摘要</button><div id="versions" style="margin-top:12px"><div class="version-row"><span>研究摘要-v1.docx<br><small>含 2 项来源 · 人工确认 · 校验通过</small></span><span class="status ok">可下载</span></div></div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="later">
+<h2>08 P1–P3 需求</h2>
+<h3><span class="tag p1">P1</span> 完整法律工作台</h3>
+<table>
+<tr><th>模块</th><th>必要产品行为</th><th>与 P0 的共享规则</th></tr>
+<tr><td>合同审查</td><td>上传合同、选择审查立场与重点、展示风险条款/原文定位/修改建议；用户确认后导出审查版。</td><td>合同是案件材料；审查是任务；风险意见是草稿；导出形成新版本。</td></tr>
+<tr><td>诉讼文书生成</td><td>选择文书类型，复用案件材料与证据，分节生成并允许逐节重写；事实字段缺失时先补充，不编造。</td><td>沿用案号/日期/金额校验、引用溯源、人工确认和不可变交付。</td></tr>
+<tr><td>证据评价</td><td>按证据项展示证明目的、关联材料、风险与待补证事项。</td><td>证据原文不可由模型改写；评价与原材料分离保存。</td></tr>
+<tr><td>模型与路由设置</td><td>按日常/质量/视觉角色配置模型；显示当前实际模型与换模影响；长任务执行中禁止无提示换模。</td><td>历史任务保留实际模型快照，设置变化不重写历史。</td></tr>
+<tr><td>知识与诊断</td><td>显示知识库范围、更新状态、失败文件和服务日志；重建等危险操作需明确授权与维护窗口。</td><td>诊断不暴露密钥；维护操作写入审计。</td></tr>
+</table>
+<h3><span class="tag p2">P2</span> 安装、更新与恢复</h3>
+<ul>
+<li>安装流程区分程序目录和用户数据目录，首次启动执行环境检查并给出可操作的修复说明。</li>
+<li>更新前验证程序、配置、模型与知识数据兼容性；用户案件和交付不参与覆盖安装。</li>
+<li>配置迁移失败时保留原配置并停止启动，不允许以默认配置静默覆盖。</li>
+<li>备份包含案件、任务、证据、摘要、交付和必要配置；模型与大型知识库可独立备份。</li>
+<li>恢复前显示备份版本、时间和影响范围；恢复动作需要确认并记录审计。</li>
+</ul>
+<h3><span class="tag p3">P3</span> 团队能力边界</h3>
+<p>团队版再定义组织、成员、案件所有者、协作者、只读者和审计员。未评审前，不把 P0 的单用户本地授权机制扩展成“多人共用同一账户”。</p>
+</section>
+
+<section id="rules">
+<h2>09 共享规则与异常</h2>
+<h3>9.1 权限与数据边界</h3>
+<ul>
+<li>P0 所有案件对当前本机用户可见；没有“分享给他人”或公开发布动作。</li>
+<li>远程瘦客户端只是访问入口，案件与模型数据仍位于用户指定的 SLP 数据节点。</li>
+<li>诊断和日志界面默认隐藏密钥、完整鉴权头和敏感路径；导出诊断包前提示可能包含的信息。</li>
+</ul>
+<h3>9.2 引用与事实规则</h3>
+<ul>
+<li>引用必须指向已保存的证据对象；证据不可用或定位缺失时明确提示，不能自动补造。</li>
+<li>模型生成的案号、条款、日期、金额不属于证据，只有回到真实来源后才可作为已核验事实。</li>
+<li>“部分检索”“部分解析”“部分完成”都必须在研究页和导出物中保留范围说明。</li>
+</ul>
+<h3>9.3 取消、重试与并发</h3>
+<ul>
+<li>同一案件可并行发起任务，但界面必须提示共享模型资源可能带来的排队；不允许一个任务无提示打断另一个模型的流式输出。</li>
+<li>重试总是产生新执行记录；旧证据和旧错误保持可查。</li>
+<li>重复点击提交在任务创建成功前只产生一个任务；网络回包未知时先查询任务状态，不直接再次生成。</li>
+</ul>
+<h3>9.4 保存与不可逆动作</h3>
+<ul>
+<li>归档、取消、恢复备份、重建知识库等动作需要确认，并说明影响范围。</li>
+<li>交付版本不可变；任何修改通过新版本完成。P0 不提供永久删除案件，避免不可恢复的数据损失。</li>
+</ul>
+</section>
+
+<section id="nfr">
+<h2>10 非功能要求</h2>
+<table>
+<tr><th>维度</th><th>要求</th></tr>
+<tr><td>隐私</td><td>默认本地处理案件材料与检索结果；调用云端模型或外部检索前，明确标识数据离开本机的范围并提供可关闭设置。</td></tr>
+<tr><td>可靠性</td><td>单个检索源、模型或解析器故障不影响已有案件与交付读取；任务失败不得损坏已保存成果。</td></tr>
+<tr><td>可升级性</td><td>业务对象和状态保持稳定；程序、配置、模型和知识数据独立版本化；迁移可检查、可备份、可解释。</td></tr>
+<tr><td>可观测性</td><td>每个任务记录输入摘要、阶段、耗时、实际模型、错误与重试关系；用户能看到可理解的说明，详细诊断可另导出。</td></tr>
+<tr><td>性能</td><td>优先返回首阶段状态和部分结果，避免页面长时间无反馈。<span class="tbd">[TBD]</span> 具体首屏、检索和解析时延目标在 MVP 基准后确定，不预设无依据数字。</td></tr>
+<tr><td>可访问性</td><td>核心流程可用键盘完成；状态不只依赖颜色；长原文、表格和引用面板适应常见桌面宽度。</td></tr>
+</table>
+</section>
+
+<section id="open">
+<h2>11 待决策事项</h2>
+<table>
+<tr><th>事项</th><th>为何影响产品</th><th>当前处理</th></tr>
+<tr><td>首个分发对象是否始终为本人</td><td>决定是否需要提前引入多用户和权限，而非 P3 再做</td><td><span class="tbd">[Assumption, TBD]</span> 当前按单用户设计。</td></tr>
+<tr><td>材料大小与扫描页数上限</td><td>影响上传提示、任务拆分与磁盘策略</td><td><span class="tbd">[TBD]</span> 性能验证后确定。</td></tr>
+<tr><td>是否纳入外部网络检索</td><td>影响隐私提示、来源等级和网络失败流程</td><td>P0 不依赖外部检索；后续单独评审。</td></tr>
+<tr><td>桌面版签名与更新发布方式</td><td>影响安装体验和自动更新可信性</td><td><span class="tbd">[TBD]</span> P2 前确定签名主体和更新渠道。</td></tr>
+</table>
+</section>
+
+<div class="footer">SLP 法律工作台 · 产品架构与 PRD · v0.9 评审稿。本文以已确认的系统能力和产品方向为输入；标记为 TBD 的内容需要在对应版本设计冻结前决策。</div>
+</main>
+</div>
+<div class="toast" id="toast">操作完成</div>
+<script>
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove('show'),2200)}
+function showTab(name,el){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));el.classList.add('active');document.getElementById('pane-'+name).classList.add('active')}
+function selectCase(el,name){document.querySelectorAll('.case-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');document.getElementById('caseTitle').textContent=name;toast('已切换案件，工作上下文已更新')}
+function setHealth(ok){const h=document.getElementById('health');h.className='health'+(ok?'':' bad');h.textContent=ok?'● 核心服务就绪｜算力节点：Mac Studio｜日常模型：A3B':'● 裁判文书服务不可用｜已有案件与交付可读取，新类案任务已暂停';toast(ok?'服务状态已恢复':'已展示降级状态')}
+function runSearch(){const q=document.getElementById('query').value.trim();document.getElementById('searchResults').hidden=true;document.getElementById('searchEmpty').hidden=true;const meta=document.getElementById('searchMeta');meta.textContent='检索中：正在拆分检索词并查询本地来源…';setTimeout(()=>{if(!q){document.getElementById('searchEmpty').hidden=false;meta.textContent='未执行：请输入法律问题或关键词';return}document.getElementById('searchResults').hidden=false;meta.textContent='实际检索词：'+q+'｜已覆盖本地法规与裁判文书｜2 条示例结果'},650)}
+function showSource(type){const p=document.getElementById('sourcePanel');if(type==='law'){p.innerHTML='<b>[1] 《中华人民共和国民法典》</b><p>第六百八十条</p><p>禁止高利放贷，借款的利率不得违反国家有关规定。借款合同对支付利息没有约定的，视为没有利息。</p><p class="small">来源：本地法规库｜定位：条款号｜检索执行：#S-201</p>'}else{p.innerHTML='<b>[2] 民间借贷利息争议参考判决</b><p>原文摘录：法院结合合同约定、实际履行及司法保护上限认定应付利息……</p><p class="small">来源：裁判文书库｜定位：案号与段落可用（原型不展示虚构案号）｜检索执行：#S-201</p>'}}
+function generateSummary(){document.getElementById('summary').hidden=false;toast('已生成草稿；请逐项核对引用')}
+function uploadFile(){const list=document.getElementById('fileList');const row=document.createElement('div');row.className='file-row';row.innerHTML='<span>庭审笔录.pdf<br><small>等待解析 · 原文件已保存</small></span><span class="status run">解析中</span>';list.prepend(row);setTimeout(()=>{row.querySelector('.status').className='status ok';row.querySelector('.status').textContent='可用';row.querySelector('small').textContent='PDF · 8 页 · 可定位';toast('材料解析完成')},1200)}
+function taskAction(){const s=document.getElementById('taskStatus');const b=document.getElementById('taskButton');if(s.textContent==='运行中'){s.className='status part';s.textContent='已取消';b.textContent='重试';b.className='btn';document.getElementById('taskProgress').style.width='35%';toast('已保留已返回证据')}else{s.className='status run';s.textContent='运行中';b.textContent='重试中';b.disabled=true;document.getElementById('taskProgress').style.width='65%';setTimeout(()=>{s.className='status ok';s.textContent='已完成';b.textContent='查看';b.disabled=false;document.getElementById('taskProgress').style.width='100%'},1200)}}
+function exportVersion(){const v=document.getElementById('versions');const row=document.createElement('div');row.className='version-row';const n=v.children.length+1;row.innerHTML='<span>研究摘要-v'+n+'.docx<br><small>含来源清单 · 人工确认 · 校验通过</small></span><span class="status ok">可下载</span>';v.prepend(row);toast('已创建不可变交付版本 v'+n)}
+function resetDemo(){location.reload()}
+</script>
+</body>
+</html>

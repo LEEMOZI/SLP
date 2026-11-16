@@ -68,14 +68,13 @@
         displayName: 'LM Studio 本地推理'
         baseUrl: 'http://localhost:1234/v1'
         apiKey: 'lm-studio'
-        defaultModel: 'qwen/qwen3.8-27b'
+        defaultModel: 'qwen/qwen3.6-35b-a3b'
         compatibleModels:
+          - 'qwen/qwen3.6-35b-a3b'
           - 'qwen/qwen3.8-27b'
           - 'google/gemma-4-31b-qat'
-          - 'prism-ml/bonsai-27b'
-          - 'meta/muse-glimmer'
         capabilities:
-          maxContextTokens: 32768
+          maxContextTokens: 131072
           toolCalls: true
           streaming: true
         enableThinking: false
