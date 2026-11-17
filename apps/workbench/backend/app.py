@@ -14,6 +14,21 @@ from .cases import (
     CaseCreate,
     CaseList,
     CaseRepository,
+    utc_now,
+)
+from .delivery import (
+    DeliveryList,
+    DeliveryNotFoundError,
+    DeliveryRepository,
+    DeliveryStorage,
+    DeliveryVersion,
+    ExportCreate,
+    check_traceability,
+    download_filename,
+    extract_facts,
+    render_docx,
+    render_markdown,
+    summarize_facts,
 )
 from .health import HealthChecker, ReadinessReport
 from .integrations import CapabilityError, CapabilityGateway
@@ -66,6 +81,7 @@ from .tasks import (
     TaskRepository,
     TaskRetry,
     TaskStateError,
+    new_id,
 )
 
 
@@ -111,6 +127,8 @@ def create_app(
         capability_gateway,
     )
     task_service.register_handler("summarize", summary_handler)
+    delivery_repository = DeliveryRepository(repository)
+    delivery_storage = DeliveryStorage(data_dir)
     if enable_task_demo:
         register_demo_handler(task_service)
 
@@ -452,6 +470,90 @@ def create_app(
             SummaryConfirmationError,
         ) as error:
             raise_summary_error(error)
+
+    @app.post(
+        "/api/summaries/{summary_id}/exports",
+        response_model=DeliveryVersion,
+        status_code=201,
+    )
+    def export_summary(summary_id: str, payload: ExportCreate):
+        try:
+            summary = summary_repository.get(summary_id)
+            summary_repository.require_case(summary.case_id, writable=True)
+            detail = summary_repository.detail(summary_id)
+            version = detail.current_version
+            if version is None or version.status != "confirmed":
+                raise SummaryValidationError("当前版本未确认，不能导出；请先确认版本")
+            issues = list(summary_repository.validate_version(detail.summary, version))
+            issues.extend(check_traceability(version.body, version.citations))
+            if issues and not payload.keep_issues:
+                raise SummaryConfirmationError(issues)
+            status = "draft" if issues else "official"
+            exported_at = utc_now()
+            if payload.format == "markdown":
+                content = render_markdown(
+                    summary.title,
+                    summary.question,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                ).encode("utf-8")
+            else:
+                content = render_docx(
+                    summary.title,
+                    summary.question,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                )
+            delivery_id = new_id()
+            storage = delivery_storage.save(delivery_id, payload.format, content)
+            return delivery_repository.create(
+                delivery_id=delivery_id,
+                case_id=summary.case_id,
+                summary_id=summary.id,
+                version=version,
+                summary_title=summary.title,
+                fmt=payload.format,
+                status=status,
+                storage=storage,
+                facts=summarize_facts(extract_facts(version.body)),
+                issues=issues,
+                exported_at=exported_at,
+            )
+        except (
+            SummaryNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            SummaryValidationError,
+            SummaryConfirmationError,
+        ) as error:
+            raise_summary_error(error)
+
+    @app.get("/api/cases/{case_id}/deliveries", response_model=DeliveryList)
+    def list_deliveries(case_id: str):
+        try:
+            summary_repository.require_case(case_id)
+        except TaskCaseNotFoundError as error:
+            raise_summary_error(error)
+        items = delivery_repository.list_by_case(case_id)
+        return DeliveryList(items=items, total=len(items))
+
+    @app.get("/api/deliveries/{delivery_id}/download")
+    def download_delivery(delivery_id: str):
+        try:
+            delivery = delivery_repository.get(delivery_id)
+            path = delivery_storage.path_for(delivery.storage_key)
+        except (DeliveryNotFoundError, OSError, ValueError) as error:
+            raise HTTPException(status_code=404, detail="交付文件不存在") from error
+        return FileResponse(
+            path,
+            filename=download_filename(delivery),
+            media_type="application/octet-stream",
+            headers={"X-Content-Type-Options": "nosniff"},
+        )
 
     @app.get("/api/cases", response_model=CaseList)
     def list_cases(include_archived: bool = Query(default=False)):

@@ -7,6 +7,7 @@ MIGRATION_VERSIONS = {
     2: "material_parse_versions",
     3: "evidence_items_and_documents",
     4: "research_summaries",
+    5: "delivery_versions",
 }
 
 
@@ -204,4 +205,37 @@ def run_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(
             "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
             (4, MIGRATION_VERSIONS[4]),
+        )
+
+    if 5 not in applied:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS delivery_versions (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES cases(id),
+                summary_id TEXT NOT NULL REFERENCES research_summaries(id),
+                version_id TEXT NOT NULL REFERENCES research_summary_versions(id),
+                summary_title TEXT NOT NULL,
+                version_number INTEGER NOT NULL,
+                format TEXT NOT NULL,
+                status TEXT NOT NULL,
+                storage_key TEXT NOT NULL UNIQUE,
+                sha256 TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                facts TEXT NOT NULL DEFAULT '{}',
+                issues TEXT NOT NULL DEFAULT '[]',
+                generator_provider TEXT,
+                actual_model TEXT,
+                task_id TEXT,
+                exported_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_deliveries_case
+            ON delivery_versions(case_id, exported_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_deliveries_summary
+            ON delivery_versions(summary_id, exported_at DESC);
+            """
+        )
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (5, MIGRATION_VERSIONS[5]),
         )

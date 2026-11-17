@@ -378,6 +378,30 @@ export interface SummaryList {
   total: number;
 }
 
+export interface DeliveryVersion {
+  id: string;
+  case_id: string;
+  summary_id: string;
+  version_id: string;
+  summary_title: string;
+  version_number: number;
+  format: "markdown" | "docx";
+  status: "official" | "draft";
+  sha256: string;
+  size_bytes: number;
+  facts: Record<string, unknown>;
+  issues: CitationIssue[];
+  generator_provider: string | null;
+  actual_model: string | null;
+  task_id: string | null;
+  exported_at: string;
+}
+
+export interface DeliveryList {
+  items: DeliveryVersion[];
+  total: number;
+}
+
 export interface SummaryCreate {
   title: string;
   question: string;

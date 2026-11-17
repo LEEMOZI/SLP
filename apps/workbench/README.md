@@ -1,6 +1,6 @@
 # SLP 法律工作台（独立 Web 实例）
 
-基于 FastAPI、React 与 SQLite 的独立工作台，不修改或接管既有 SLP MCP 服务。当前包含 FR-01 服务就绪检查、FR-02 案件管理、FR-03 材料上传与解析、FR-04 统一法规与类案检索、FR-05 统一任务中心、FR-06 证据查看与研究摘要。
+基于 FastAPI、React 与 SQLite 的独立工作台，不修改或接管既有 SLP MCP 服务。当前包含 FR-01 服务就绪检查、FR-02 案件管理、FR-03 材料上传与解析、FR-04 统一法规与类案检索、FR-05 统一任务中心、FR-06 证据查看与研究摘要、FR-07 保存导出与交付版本。
 
 ## 本地运行
 
@@ -88,7 +88,19 @@ SLP_SUMMARY_OPENAI_TIMEOUT_S=180 \
 .venv/bin/python -m uvicorn apps.capability_adapter.app:app --host 127.0.0.1 --port 8790
 ```
 
-三个 OpenAI 连接配置必须完整；请求失败、响应无效或引用伪造都会使任务失败，不会静默降级为规则摘录。生成结果记录请求生成器、实际生成器、实际模型、任务和 Attempt。当前范围不包含 FR-07 Markdown/DOCX 导出。
+三个 OpenAI 连接配置必须完整；请求失败、响应无效或引用伪造都会使任务失败，不会静默降级为规则摘录。生成结果记录请求生成器、实际生成器、实际模型、任务和 Attempt。
+
+## 交付导出（FR-07）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/summaries/{summary_id}/exports` | 导出当前版本为 Markdown 或 DOCX；请求体 `{"format": "markdown"|"docx", "keep_issues": bool}` |
+| GET | `/api/cases/{case_id}/deliveries` | 案件交付版本列表（归档案件可读） |
+| GET | `/api/deliveries/{delivery_id}/download` | 下载交付文件，文件名含标题、版本、格式与状态 |
+
+仅 `confirmed` 状态的当前版本可导出，否则返回 422。导出前合并两项校验：版本冻结引用校验（与确认一致）和事实可追溯性校验——正文中抽取的案号、日期、金额（正则与归一化复制自 `MCP/law-search/core/delivery_gate.py`）必须出现在正文实际引用来源的冻结文本中。校验发现问题默认阻断并返回 `summary_validation_failed` 与逐条位置（行号 + 摘录）；显式传 `keep_issues: true` 时导出为 `draft` 状态，文件与交付列表均醒目标记。无问题时导出为 `official`。
+
+每次导出生成新记录和新文件（`storage_key = deliveries/{id}.{ext}`），记录版本号、sha256、大小、抽取事实、校验问题、生成器、实际模型与任务，导出后不可变：正文后续修改或重新导出不会改动历史交付文件。导出文件包含交付信息页（研究问题、版本状态、生成器、校验结论、导出时间）、正文（`[[S1]]` 引用保留原样）和来源清单附录。归档案件禁止导出，但保留列表与下载。
 
 ## 任务 API
 

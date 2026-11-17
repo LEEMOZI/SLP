@@ -6,6 +6,7 @@ import type {
   AffectedCitation,
   Capabilities,
   CitationIssue,
+  DeliveryVersion,
   EvidenceDetail,
   ResearchSummary,
   SourceReference,
@@ -77,6 +78,8 @@ export default function ResearchPanel({
   onRetryHandled,
 }: ResearchPanelProps) {
   const [summaries, setSummaries] = useState<ResearchSummary[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryVersion[]>([]);
+  const [exportIssues, setExportIssues] = useState<{ issues: CitationIssue[]; format: "markdown" | "docx" } | null>(null);
   const [detail, setDetail] = useState<SummaryDetail | null>(null);
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +91,7 @@ export default function ResearchPanel({
   const [validationRequested, setValidationRequested] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [action, setAction] = useState<"create" | "save" | "generate" | "confirm" | "remove" | "retry" | null>(null);
+  const [action, setAction] = useState<"create" | "save" | "generate" | "confirm" | "export" | "remove" | "retry" | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("研究摘要");
   const [newQuestion, setNewQuestion] = useState("");
@@ -151,6 +154,14 @@ export default function ResearchPanel({
   }, [caseId, refreshToken]);
 
   useEffect(() => {
+    let current = true;
+    api.listDeliveries(caseId)
+      .then((result) => { if (current) setDeliveries(result.items); })
+      .catch(() => { if (current) setDeliveries([]); });
+    return () => { current = false; };
+  }, [caseId, refreshToken]);
+
+  useEffect(() => {
     const requestId = ++detailRequestRef.current;
     setGenerationTask(null);
     setWatchedTaskId(null);
@@ -185,6 +196,7 @@ export default function ResearchPanel({
     setDirty(false);
     setSelectedVersionId(detail?.current_version?.id || null);
     setValidationRequested(false);
+    setExportIssues(null);
     generateKeyRef.current = null;
   }, [detail?.summary.id, detail?.current_version?.id]);
 
@@ -345,6 +357,31 @@ export default function ResearchPanel({
       setNotice("生成任务已创建；只有完整成功并通过引用校验后才会追加版本");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "摘要生成任务创建失败");
+    } finally {
+      setAction(null);
+    }
+  }
+
+  async function handleExport(format: "markdown" | "docx", keepIssues: boolean) {
+    if (!detail || archived) return;
+    setAction("export");
+    setError("");
+    try {
+      const delivery = await api.createExport(detail.summary.id, format, keepIssues);
+      setExportIssues(null);
+      setDeliveries((current) => [delivery, ...current]);
+      setNotice(
+        delivery.status === "official"
+          ? `已导出正式交付版本（${delivery.format === "markdown" ? "Markdown" : "DOCX"}）；交付文件不可变，后续修改请重新导出`
+          : `已导出草稿交付版本，文件与交付列表已醒目标记 ${delivery.issues.length} 个未核实问题`
+      );
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.issues.length > 0) {
+        setExportIssues({ issues: cause.issues, format });
+        setError("");
+      } else {
+        setError(cause instanceof Error ? cause.message : "导出失败");
+      }
     } finally {
       setAction(null);
     }
@@ -547,6 +584,17 @@ export default function ResearchPanel({
                     <div className="summary-issues" role="alert"><strong>确认前需要处理</strong>{issues.map((issue, index) => <p key={`${issue.code}-${issue.handle}-${index}`}>{issue.message}</p>)}</div>
                   )}
 
+                  {exportIssues && viewingCurrent && (
+                    <div className="summary-issues delivery-issues" role="alert">
+                      <strong>导出前校验发现问题（{exportIssues.format === "markdown" ? "Markdown" : "DOCX"}）</strong>
+                      {exportIssues.issues.map((issue, index) => <p key={`${issue.code}-${issue.handle}-${index}`}>{issue.message}</p>)}
+                      <div className="delivery-issue-actions">
+                        <span>可保留问题导出草稿，文件与交付列表将醒目标记为草稿。</span>
+                        <button className="button danger-quiet" type="button" disabled={action !== null} onClick={() => void handleExport(exportIssues.format, true)}>{action === "export" ? "正在导出…" : "保留问题并导出草稿"}</button>
+                      </div>
+                    </div>
+                  )}
+
                   {!archived && (
                     <div className="summary-editor-actions">
                       <span>{dirty ? "有未保存修改；确认前请先保存为新版本。" : "保存与重新生成都会追加版本，不覆盖历史。"}</span>
@@ -554,6 +602,15 @@ export default function ResearchPanel({
                         <button className="button secondary" type="button" disabled={!viewingCurrent || action !== null || generating} onClick={() => void handleSave()}>{action === "save" ? "正在保存…" : "保存为新版本"}</button>
                         <button className="button secondary" type="button" disabled={detail.sources.length === 0 || dirty || action !== null || generating} onClick={() => void handleGenerate()}>{action === "generate" ? "正在创建…" : generating ? "正在生成…" : "重新生成"}</button>
                         <button className="button primary" type="button" disabled={!detail.current_version || !viewingCurrent || dirty || action !== null || generating || detail.current_version.status === "confirmed"} onClick={() => void handleConfirm()}>{action === "confirm" ? "正在校验…" : detail.current_version?.status === "confirmed" ? "已人工复核" : "确认当前版本"}</button>
+                      </div>
+                    </div>
+                  )}
+                  {!archived && (
+                    <div className="summary-export-actions">
+                      <span>{detail.current_version?.status === "confirmed" && !dirty ? "导出生成不可变交付文件，记录校验结论、任务与实际模型。" : "仅已人工复核且无未保存修改的当前版本可导出；请先确认版本。"}</span>
+                      <div>
+                        <button className="button secondary" type="button" disabled={!detail.current_version || !viewingCurrent || dirty || action !== null || detail.current_version.status !== "confirmed"} onClick={() => void handleExport("markdown", false)}>{action === "export" ? "正在导出…" : "导出 Markdown"}</button>
+                        <button className="button secondary" type="button" disabled={!detail.current_version || !viewingCurrent || dirty || action !== null || detail.current_version.status !== "confirmed"} onClick={() => void handleExport("docx", false)}>导出 DOCX</button>
                       </div>
                     </div>
                   )}
@@ -582,6 +639,27 @@ export default function ResearchPanel({
                   )}
                 </aside>
               </div>
+
+              <section className="delivery-list" aria-labelledby="delivery-list-title">
+                <div className="result-section-heading"><h4 id="delivery-list-title">交付版本</h4><span>{deliveries.length} 次导出 · 交付文件不可变</span></div>
+                {deliveries.length === 0 ? <div className="empty-state compact">尚无导出；确认当前版本后可导出 Markdown 或 DOCX。</div> : (
+                  <div className="delivery-items">
+                    {deliveries.map((item) => (
+                      <article className={`delivery-item ${item.status}`} key={item.id}>
+                        <div className="delivery-item-heading">
+                          <span className={`delivery-format ${item.format}`}>{item.format === "markdown" ? "Markdown" : "DOCX"}</span>
+                          <strong>{item.summary_title} · 第 {item.version_number} 版</strong>
+                          {item.status === "official"
+                            ? <span className="delivery-status official">正式交付</span>
+                            : <span className="delivery-status draft">草稿 · {item.issues.length} 个未核实问题</span>}
+                        </div>
+                        <p>{formatDate(item.exported_at)} · {(item.size_bytes / 1024).toFixed(1)} KB · sha256 {item.sha256.slice(0, 12)}…</p>
+                        <a className="button secondary" href={`/api/deliveries/${item.id}/download`} download>下载</a>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
             </>
           )}
         </div>
