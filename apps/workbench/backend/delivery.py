@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from .cases import utc_now
+from .contract_reviews import ContractReviewVersion, LawSource, RiskItem
 from .summaries import (
     CITATION_PATTERN,
     CitationIssue,
@@ -146,7 +147,8 @@ def _sanitize_filename(value: str) -> str:
 def download_filename(delivery: "DeliveryVersion") -> str:
     ext = "md" if delivery.format == "markdown" else "docx"
     base = _sanitize_filename(delivery.summary_title)
-    return f"{base}_v{delivery.version_number}_{delivery.format}_{delivery.status}.{ext}"
+    kind_tag = "review" if delivery.kind == "contract_review" else "summary"
+    return f"{base}_v{delivery.version_number}_{kind_tag}_{delivery.format}_{delivery.status}.{ext}"
 
 
 def render_markdown(
@@ -257,6 +259,183 @@ def render_docx(
     return buffer.getvalue()
 
 
+# ---- 合同审查版本渲染 ----
+
+RISK_LEVEL_LABELS = {"高危": "高危", "中等": "中等", "提示": "提示"}
+
+
+def render_review_markdown(
+    title: str,
+    contract_type: str,
+    focus_points: str,
+    version: ContractReviewVersion,
+    status: str,
+    issues: List[CitationIssue],
+    exported_at: str,
+) -> str:
+    lines: List[str] = []
+    lines.append(f"# {title}")
+    lines.append("")
+    lines.append("## 基本信息")
+    lines.append(f"- 合同类型：{contract_type or '（未填写）'}")
+    lines.append(f"- 关注重点：{focus_points or '（未填写）'}")
+    lines.append(f"- 版本：v{version.version_number}（{STATUS_LABELS[status]}）")
+    lines.append(f"- 生成器：{version.generator_provider or '手动编辑'}")
+    if version.actual_model:
+        lines.append(f"- 实际模型：{version.actual_model}")
+    lines.append(f"- 导出时间：{exported_at}")
+    lines.append("")
+
+    lines.append("## 风险清单")
+    if version.risks:
+        level_counts = {"高危": 0, "中等": 0, "提示": 0}
+        for risk in version.risks:
+            level_counts[risk.level] = level_counts.get(risk.level, 0) + 1
+        summary_parts = []
+        if level_counts["高危"]:
+            summary_parts.append(f"高危 {level_counts['高危']}")
+        if level_counts["中等"]:
+            summary_parts.append(f"中等 {level_counts['中等']}")
+        if level_counts["提示"]:
+            summary_parts.append(f"提示 {level_counts['提示']}")
+        lines.append(f"共发现 **{' / '.join(summary_parts)}** 条风险。")
+        lines.append("")
+
+        for risk in version.risks:
+            level_label = RISK_LEVEL_LABELS.get(risk.level, risk.level)
+            lines.append(f"### [{level_label}] {risk.excerpt or '（无条款引用）'}")
+            if risk.risk_issue:
+                lines.append(f"**风险：** {risk.risk_issue}")
+            if risk.suggestion:
+                lines.append(f"**建议：** {risk.suggestion}")
+            if risk.legal_basis:
+                lines.append(f"**依据：** {risk.legal_basis}")
+            lines.append("")
+    else:
+        lines.append("_本版本未生成结构化风险清单，以下为完整审查报告正文。_")
+        lines.append("")
+
+    lines.append("## 审查报告")
+    if version.body.strip():
+        lines.append(version.body)
+        lines.append("")
+    else:
+        lines.append("_（本版本尚未填写审查报告正文）_")
+        lines.append("")
+
+    if status == "draft" and issues:
+        lines.append("## ⚠️ 未核实问题（草稿）")
+        for issue in issues:
+            handle = f"[{issue.handle}] " if issue.handle else ""
+            lines.append(f"- {handle}{issue.message}")
+        lines.append("")
+
+    lines.append("## 法条来源")
+    if version.citations:
+        for handle in sorted(version.citations):
+            src = version.citations[handle]
+            law_name = getattr(src, "law_name", None) or getattr(src, "title", "")
+            article = getattr(src, "article", None)
+            law_type = getattr(src, "law_type", "")
+            lines.append(f"- {handle} 《{law_name}》" + (f" 第{article}条" if article else "") + (f" [{law_type}]" if law_type else ""))
+    else:
+        lines.append("_本版本无法条来源记录_")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_review_docx(
+    title: str,
+    contract_type: str,
+    focus_points: str,
+    version: ContractReviewVersion,
+    status: str,
+    issues: List[CitationIssue],
+    exported_at: str,
+) -> bytes:
+    from docx import Document  # type: ignore
+
+    document = Document()
+    document.add_heading(title, level=0)
+
+    document.add_heading("基本信息", level=1)
+    info_lines = [
+        f"合同类型：{contract_type or '（未填写）'}",
+        f"关注重点：{focus_points or '（未填写）'}",
+        f"版本：v{version.version_number}（{STATUS_LABELS[status]}）",
+        f"生成器：{version.generator_provider or '手动编辑'}",
+    ]
+    if version.actual_model:
+        info_lines.append(f"实际模型：{version.actual_model}")
+    info_lines.append(f"导出时间：{exported_at}")
+    for line in info_lines:
+        document.add_paragraph(line)
+
+    document.add_heading("风险清单", level=1)
+    if version.risks:
+        level_counts = {"高危": 0, "中等": 0, "提示": 0}
+        for risk in version.risks:
+            level_counts[risk.level] = level_counts.get(risk.level, 0) + 1
+        summary_parts = []
+        if level_counts["高危"]:
+            summary_parts.append(f"高危 {level_counts['高危']}")
+        if level_counts["中等"]:
+            summary_parts.append(f"中等 {level_counts['中等']}")
+        if level_counts["提示"]:
+            summary_parts.append(f"提示 {level_counts['提示']}")
+        document.add_paragraph(f"共发现 {' / '.join(summary_parts)} 条风险。")
+
+        for risk in version.risks:
+            document.add_heading(
+                f"[{RISK_LEVEL_LABELS.get(risk.level, risk.level)}] {risk.excerpt or '（无条款引用）'}",
+                level=2,
+            )
+            if risk.risk_issue:
+                document.add_paragraph(f"风险：{risk.risk_issue}")
+            if risk.suggestion:
+                document.add_paragraph(f"建议：{risk.suggestion}")
+            if risk.legal_basis:
+                document.add_paragraph(f"依据：{risk.legal_basis}")
+    else:
+        document.add_paragraph("本版本未生成结构化风险清单。")
+
+    document.add_heading("审查报告", level=1)
+    if version.body.strip():
+        for para in version.body.split("\n\n"):
+            cleaned = para.strip()
+            if cleaned:
+                document.add_paragraph(cleaned)
+    else:
+        document.add_paragraph("（本版本尚未填写审查报告正文）")
+
+    if status == "draft" and issues:
+        document.add_heading("未核实问题（草稿）", level=1)
+        for issue in issues:
+            handle = f"[{issue.handle}] " if issue.handle else ""
+            document.add_paragraph(f"{handle}{issue.message}", style="List Bullet")
+
+    document.add_heading("法条来源", level=1)
+    if version.citations:
+        for handle in sorted(version.citations):
+            src = version.citations[handle]
+            law_name = getattr(src, "law_name", None) or getattr(src, "title", "")
+            article = getattr(src, "article", None)
+            law_type = getattr(src, "law_type", "")
+            suffix = f" 第{article}条" if article else ""
+            type_suffix = f" [{law_type}]" if law_type else ""
+            document.add_paragraph(
+                f"{handle} 《{law_name}》{suffix}{type_suffix}",
+                style="List Bullet",
+            )
+    else:
+        document.add_paragraph("本版本无法条来源记录")
+
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
 class ExportCreate(BaseModel):
     format: Literal["markdown", "docx"]
     keep_issues: bool = False
@@ -265,7 +444,9 @@ class ExportCreate(BaseModel):
 class DeliveryVersion(BaseModel):
     id: str
     case_id: str
-    summary_id: str
+    summary_id: Optional[str] = None
+    review_id: Optional[str] = None
+    kind: Literal["summary", "contract_review"] = "summary"
     version_id: str
     summary_title: str
     version_number: int
@@ -333,23 +514,31 @@ class DeliveryRepository:
         self,
         delivery_id: str,
         case_id: str,
-        summary_id: str,
-        version: SummaryVersion,
+        summary_id: Optional[str],
+        review_id: Optional[str],
+        kind: str,
+        version_id: str,
         summary_title: str,
+        version_number: int,
         fmt: str,
         status: str,
         storage: Dict[str, Any],
         facts: Dict[str, Any],
         issues: List[CitationIssue],
         exported_at: str,
+        generator_provider: Optional[str] = None,
+        actual_model: Optional[str] = None,
+        task_id: Optional[str] = None,
     ) -> DeliveryVersion:
         record = {
             "id": delivery_id,
             "case_id": case_id,
             "summary_id": summary_id,
-            "version_id": version.id,
+            "review_id": review_id,
+            "kind": kind,
+            "version_id": version_id,
             "summary_title": summary_title,
-            "version_number": version.version_number,
+            "version_number": version_number,
             "format": fmt,
             "status": status,
             "storage_key": storage["storage_key"],
@@ -359,9 +548,9 @@ class DeliveryRepository:
             "issues": json.dumps(
                 [issue.model_dump() for issue in issues], ensure_ascii=False
             ),
-            "generator_provider": version.generator_provider,
-            "actual_model": version.actual_model,
-            "task_id": version.task_id,
+            "generator_provider": generator_provider,
+            "actual_model": actual_model,
+            "task_id": task_id,
             "exported_at": exported_at,
         }
         columns = ", ".join(record.keys())
@@ -375,9 +564,11 @@ class DeliveryRepository:
             id=delivery_id,
             case_id=case_id,
             summary_id=summary_id,
-            version_id=version.id,
+            review_id=review_id,
+            kind=kind,
+            version_id=version_id,
             summary_title=summary_title,
-            version_number=version.version_number,
+            version_number=version_number,
             format=fmt,
             status=status,
             storage_key=storage["storage_key"],
@@ -385,9 +576,9 @@ class DeliveryRepository:
             size_bytes=storage["size_bytes"],
             facts=facts,
             issues=issues,
-            generator_provider=version.generator_provider,
-            actual_model=version.actual_model,
-            task_id=version.task_id,
+            generator_provider=generator_provider,
+            actual_model=actual_model,
+            task_id=task_id,
             exported_at=exported_at,
         )
 

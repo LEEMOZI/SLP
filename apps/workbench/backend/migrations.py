@@ -9,6 +9,7 @@ MIGRATION_VERSIONS = {
     4: "research_summaries",
     5: "delivery_versions",
     6: "contract_reviews",
+    7: "delivery_polymorphic",
 }
 
 
@@ -285,4 +286,29 @@ def run_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(
             "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
             (6, MIGRATION_VERSIONS[6]),
+        )
+
+    if 7 not in applied:
+        # 让 delivery_versions 同时支持 research_summary 和 contract_review 两种来源
+        # SQLite 的 ALTER TABLE 不支持改列约束，这里用 ALTER COLUMN NULLABLE 的替代方案：
+        # 直接 ALTER COLUMN 不行，先检查 summary_id 是否已有 NULL 值，再 ADD 新列
+        connection.execute(
+            # SQLite 3.35+ 支持 ALTER COLUMN
+            "ALTER TABLE delivery_versions ALTER COLUMN summary_id DROP NOT NULL"
+        )
+        connection.execute(
+            "ALTER TABLE delivery_versions ADD COLUMN review_id TEXT "
+            "REFERENCES contract_reviews(id)"
+        )
+        connection.execute(
+            "ALTER TABLE delivery_versions ADD COLUMN kind TEXT NOT NULL "
+            "DEFAULT 'summary'"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_deliveries_review "
+            "ON delivery_versions(review_id, exported_at DESC)"
+        )
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (7, MIGRATION_VERSIONS[7]),
         )

@@ -28,6 +28,8 @@ from .delivery import (
     extract_facts,
     render_docx,
     render_markdown,
+    render_review_docx,
+    render_review_markdown,
     summarize_facts,
 )
 from .health import HealthChecker, ReadinessReport
@@ -665,14 +667,20 @@ def create_app(
                 delivery_id=delivery_id,
                 case_id=summary.case_id,
                 summary_id=summary.id,
-                version=version,
+                review_id=None,
+                kind="summary",
+                version_id=version.id,
                 summary_title=summary.title,
+                version_number=version.version_number,
                 fmt=payload.format,
                 status=status,
                 storage=storage,
                 facts=summarize_facts(extract_facts(version.body)),
                 issues=issues,
                 exported_at=exported_at,
+                generator_provider=version.generator_provider,
+                actual_model=version.actual_model,
+                task_id=version.task_id,
             )
         except (
             SummaryNotFoundError,
@@ -682,6 +690,77 @@ def create_app(
             SummaryConfirmationError,
         ) as error:
             raise_summary_error(error)
+
+    @app.post(
+        "/api/reviews/{review_id}/exports",
+        response_model=DeliveryVersion,
+        status_code=201,
+    )
+    def export_review(review_id: str, payload: ExportCreate):
+        try:
+            review = contract_review_repository.get(review_id)
+            contract_review_repository.require_case(review.case_id, writable=True)
+            detail = contract_review_repository.detail(review_id)
+            version = detail.current_version
+            if version is None or version.status != "confirmed":
+                raise ContractReviewValidationError(
+                    "当前版本未确认，不能导出；请先确认版本"
+                )
+            # 合同审查的 review citations 不含 Evidence 引用，用 validate_version 做法条引用校验
+            issues = validate_review_version(review, version)
+            if issues and not payload.keep_issues:
+                raise ContractReviewConfirmationError(issues)
+            status = "draft" if issues else "official"
+            exported_at = utc_now()
+            if payload.format == "markdown":
+                content = render_review_markdown(
+                    review.title,
+                    review.contract_type,
+                    review.focus_points,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                ).encode("utf-8")
+            else:
+                content = render_review_docx(
+                    review.title,
+                    review.contract_type,
+                    review.focus_points,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                )
+            delivery_id = new_id()
+            storage = delivery_storage.save(delivery_id, payload.format, content)
+            return delivery_repository.create(
+                delivery_id=delivery_id,
+                case_id=review.case_id,
+                summary_id=None,
+                review_id=review.id,
+                kind="contract_review",
+                version_id=version.id,
+                summary_title=review.title,
+                version_number=version.version_number,
+                fmt=payload.format,
+                status=status,
+                storage=storage,
+                facts={},  # 合同审查暂不做自动事实抽取
+                issues=issues,
+                exported_at=exported_at,
+                generator_provider=version.generator_provider,
+                actual_model=version.actual_model,
+                task_id=version.task_id,
+            )
+        except (
+            ContractReviewNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            ContractReviewValidationError,
+            ContractReviewConfirmationError,
+        ) as error:
+            raise_review_error(error)
 
     @app.get("/api/cases/{case_id}/deliveries", response_model=DeliveryList)
     def list_deliveries(case_id: str):

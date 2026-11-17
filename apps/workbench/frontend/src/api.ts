@@ -154,6 +154,11 @@ export const api = {
       body: JSON.stringify({ format, keep_issues: keepIssues }),
     }),
   listDeliveries: (caseId: string) => request<DeliveryList>(`/api/cases/${caseId}/deliveries`),
+  createReviewExport: (reviewId: string, format: "markdown" | "docx", keepIssues: boolean) =>
+    request<DeliveryVersion>(`/api/reviews/${reviewId}/exports`, {
+      method: "POST",
+      body: JSON.stringify({ format, keep_issues: keepIssues }),
+    }),
   listReviews: (caseId: string) => request<ContractReviewList>(`/api/cases/${caseId}/reviews`),
   createReview: (caseId: string, materialId: string, title: string, contractType: string, focusPoints: string) =>
     request<ContractReviewDetail>(`/api/cases/${caseId}/reviews`, {

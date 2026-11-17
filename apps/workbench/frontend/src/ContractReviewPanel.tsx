@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ContractReview, ContractReviewDetail, Material, RiskItem } from "./types";
+import type { ContractReview, ContractReviewDetail, DeliveryVersion, Material, RiskItem } from "./types";
 import { api, ApiRequestError } from "./api";
 
 type RiskLevel = RiskItem["level"];
@@ -21,7 +21,7 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
   const [detail, setDetail] = useState<ContractReviewDetail | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [action, setAction] = useState<null | "create" | "generate" | "save" | "confirm">(null);
+  const [action, setAction] = useState<null | "create" | "generate" | "save" | "confirm" | "export">(null);
   const [adding, setAdding] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftType, setDraftType] = useState("服务合同");
@@ -30,12 +30,17 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
   const [draftBody, setDraftBody] = useState("");
   const [dirty, setDirty] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryVersion[]>([]);
+  const [exportIssues, setExportIssues] = useState<{ issues: { code: string; message: string; handle?: string | null }[]; format: "markdown" | "docx" } | null>(null);
 
   useEffect(() => {
     if (!caseId) return;
     let current = true;
     api.listReviews(caseId).then((r) => { if (current) setReviews(r.items); });
     api.listMaterials(caseId).then((r) => { if (current) setMaterials(r.items); });
+    api.listDeliveries(caseId)
+      .then((result) => { if (current) setDeliveries(result.items.filter((d) => d.kind === "contract_review")); })
+      .catch(() => { if (current) setDeliveries([]); });
     return () => { current = false; };
   }, [caseId, refreshToken]);
 
@@ -46,6 +51,7 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
     setDirty(false);
     setError("");
     setNotice("");
+    setExportIssues(null);
   }, [caseId, refreshToken]);
 
   useEffect(() => {
@@ -151,6 +157,30 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
         setError(`引用校验未通过：${codes}。请补齐法条 [[handle]] 或重新生成后再确认。`);
       } else {
         setError(cause instanceof Error ? cause.message : "确认失败");
+      }
+    } finally {
+      setAction(null);
+    }
+  }
+
+  async function handleExport(format: "markdown" | "docx", keepIssues: boolean) {
+    if (!detail || archived) return;
+    setAction("export");
+    setError("");
+    try {
+      const delivery = await api.createReviewExport(detail.review.id, format, keepIssues);
+      setExportIssues(null);
+      setDeliveries((current) => [delivery, ...current]);
+      setNotice(
+        delivery.status === "official"
+          ? `已导出正式交付版本（${delivery.format === "markdown" ? "Markdown" : "DOCX"}）`
+          : `已导出草稿交付版本（${delivery.format === "markdown" ? "Markdown" : "DOCX"}）· ${delivery.issues.length} 个未核实问题`
+      );
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.issues && cause.issues.length > 0) {
+        setExportIssues({ issues: cause.issues, format });
+      } else {
+        setError(cause instanceof Error ? cause.message : "导出失败");
       }
     } finally {
       setAction(null);
@@ -269,6 +299,37 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
             </header>
             {notice && <div className="notice success">{notice}</div>}
             {error && <div className="notice error" role="alert">{error}</div>}
+            {exportIssues && (
+              <div className="summary-issues delivery-issues" role="alert">
+                <strong>导出前校验发现问题（{exportIssues.format === "markdown" ? "Markdown" : "DOCX"}）</strong>
+                {exportIssues.issues.map((issue, index) => (
+                  <p key={`${issue.code}-${issue.handle ?? index}`}>
+                    <code>{issue.code}</code>：{issue.message}
+                  </p>
+                ))}
+                <div className="delivery-issue-actions">
+                  <span>可以选择忽略问题，导出草稿交付版本</span>
+                  <div>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={action !== null}
+                      onClick={() => { setExportIssues(null); void handleExport(exportIssues.format, false); }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      className="button"
+                      type="button"
+                      disabled={action !== null}
+                      onClick={() => void handleExport(exportIssues.format, true)}
+                    >
+                      强制导出为草稿
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {RISK_LEVEL_ORDER.some((l) => risksByLevel[l].length > 0) ? (
               RISK_LEVEL_ORDER
                 .filter((l) => risksByLevel[l].length > 0)
@@ -320,6 +381,22 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
                   >
                     {action === "confirm" ? "确认中…" : "确认版本"}
                   </button>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={archived || action !== null || current.status !== "confirmed"}
+                    onClick={() => void handleExport("markdown", false)}
+                  >
+                    {action === "export" ? "导出中…" : "导出 Markdown"}
+                  </button>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={archived || action !== null || current.status !== "confirmed"}
+                    onClick={() => void handleExport("docx", false)}
+                  >
+                    导出 DOCX
+                  </button>
                 </div>
               </div>
             </section>
@@ -340,6 +417,42 @@ export default function ContractReviewPanel({ caseId, archived, refreshToken }: 
                 </div>
               </section>
             )}
+            <section className="delivery-list" aria-labelledby="review-delivery-list-title">
+              <div className="result-section-heading">
+                <h4 id="review-delivery-list-title">合同审查交付版本</h4>
+                <span>{deliveries.length} 个交付文件 · 正式交付不可变</span>
+              </div>
+              {deliveries.length === 0 ? (
+                <div className="empty-state compact">尚无导出；确认当前版本后可导出 Markdown 或 DOCX</div>
+              ) : (
+                <div className="delivery-items">
+                  {deliveries.map((item) => (
+                    <article className={`delivery-item ${item.status}`} key={item.id}>
+                      <div className="delivery-item-heading">
+                        <span className={`delivery-format ${item.format}`}>{item.format === "markdown" ? "MD" : "DOCX"}</span>
+                        <strong>{item.summary_title}</strong>
+                        {item.status === "official" ? (
+                          <span className="delivery-status official">正式交付</span>
+                        ) : (
+                          <span className="delivery-status draft">草稿 · {item.issues.length} 个未核实</span>
+                        )}
+                      </div>
+                      <p>
+                        v{item.version_number} · {new Date(item.exported_at).toLocaleString("zh-CN")} ·{" "}
+                        {(item.size_bytes / 1024).toFixed(1)} KB
+                      </p>
+                      <a
+                        className="button secondary"
+                        href={`/api/deliveries/${item.id}/download`}
+                        download
+                      >
+                        下载 {item.format === "markdown" ? "Markdown" : "DOCX"}
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         )}
       </div>

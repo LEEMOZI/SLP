@@ -381,7 +381,9 @@ export interface SummaryList {
 export interface DeliveryVersion {
   id: string;
   case_id: string;
-  summary_id: string;
+  summary_id: string | null;
+  review_id: string | null;
+  kind: "summary" | "contract_review";
   version_id: string;
   summary_title: string;
   version_number: number;
