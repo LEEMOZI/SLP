@@ -12,11 +12,11 @@
     <string>/Users/simon/.local/bin/ensure_lmstudio.sh</string>
   </array>
 
-  <key>StartInterval</key>
-  <integer>60</integer>
+  <key>Disabled</key>
+  <true/>
 
   <key>RunAtLoad</key>
-  <true/>
+  <false/>
 
   <key>StandardOutPath</key>
   <string>/Users/simon/Library/Logs/lmstudio-health.log</string>

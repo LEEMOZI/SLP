@@ -10,6 +10,7 @@ MIGRATION_VERSIONS = {
     5: "delivery_versions",
     6: "contract_reviews",
     7: "delivery_polymorphic",
+    8: "litigation_documents",
 }
 
 
@@ -311,4 +312,52 @@ def run_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(
             "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
             (7, MIGRATION_VERSIONS[7]),
+        )
+
+    if 8 not in applied:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS litigation_documents (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES cases(id),
+                doc_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                parties TEXT NOT NULL DEFAULT '',
+                claims TEXT NOT NULL DEFAULT '',
+                facts TEXT NOT NULL DEFAULT '',
+                focus_points TEXT NOT NULL DEFAULT '',
+                current_version_id TEXT REFERENCES litigation_document_versions(id),
+                current_version_number INTEGER,
+                current_sources TEXT NOT NULL DEFAULT '[]',
+                latest_task_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_litigation_docs_case
+            ON litigation_documents(case_id, updated_at DESC);
+
+            CREATE TABLE IF NOT EXISTS litigation_document_versions (
+                id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL REFERENCES litigation_documents(id),
+                version_number INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                citations TEXT NOT NULL DEFAULT '{}',
+                base_version_id TEXT REFERENCES litigation_document_versions(id),
+                task_id TEXT,
+                attempt_id TEXT,
+                generator_provider TEXT,
+                requested_provider TEXT,
+                actual_model TEXT,
+                coverage TEXT NOT NULL DEFAULT '{}',
+                saved_at TEXT NOT NULL,
+                confirmed_at TEXT
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_litigation_versions_unique
+            ON litigation_document_versions(document_id, version_number);
+            """
+        )
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (8, MIGRATION_VERSIONS[8]),
         )

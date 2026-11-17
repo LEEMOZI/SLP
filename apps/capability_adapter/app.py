@@ -19,6 +19,11 @@ from .judgments import (
 )
 from .parser import MaterialParser, PARSER_VERSION, ParserLimits
 from .retrieval import search as retrieval_search
+from .litigation_generator import (
+    LitigationGenerationError,
+    LitigationGenerator,
+    LitigationRequest,
+)
 from .review_generator import (
     ReviewGenerationError,
     ReviewGenerator,
@@ -108,6 +113,7 @@ def create_app(
     judgment_engine: Optional[JudgmentEngine] = None,
     summary_generator: Optional[SummaryGenerator] = None,
     review_generator: Optional[ReviewGenerator] = None,
+    litigation_generator: Optional[LitigationGenerator] = None,
 ) -> FastAPI:
     settings = settings or AdapterSettings.from_env()
     material_parser = material_parser or MaterialParser(
@@ -120,6 +126,9 @@ def create_app(
     review_generator = review_generator or ReviewGenerator(
         settings=settings.summary, retriever=retriever
     )
+    litigation_generator = litigation_generator or LitigationGenerator(
+        settings=settings.summary, retriever=retriever
+    )
     app = FastAPI(title="SLP Capability Adapter", version=APP_VERSION)
     app.state.settings = settings
     app.state.material_parser = material_parser
@@ -127,6 +136,7 @@ def create_app(
     app.state.judgment_engine = judgment_engine
     app.state.summary_generator = summary_generator
     app.state.review_generator = review_generator
+    app.state.litigation_generator = litigation_generator
 
     @app.middleware("http")
     async def internal_token_auth(request: Request, call_next):
@@ -279,6 +289,21 @@ def create_app(
         try:
             return review_generator.generate(payload)
         except ReviewGenerationError as error:
+            return JSONResponse(
+                status_code=error.status_code,
+                content={
+                    "detail": {
+                        "code": error.code,
+                        "message": error.message,
+                    }
+                },
+            )
+
+    @app.post("/v1/litigation")
+    async def generate_litigation(payload: LitigationRequest):
+        try:
+            return litigation_generator.generate(payload)
+        except LitigationGenerationError as error:
             return JSONResponse(
                 status_code=error.status_code,
                 content={

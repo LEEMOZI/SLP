@@ -12,6 +12,27 @@ export interface CaseList {
   total: number;
 }
 
+export interface CaseDashboardStats {
+  materials: number;
+  searches: number;
+  summaries: number;
+  summaries_confirmed: number;
+  reviews: number;
+  reviews_confirmed: number;
+  litigation_docs: number;
+  litigation_confirmed: number;
+  tasks_total: number;
+  tasks_running: number;
+  tasks_completed: number;
+  tasks_failed: number;
+  deliveries: number;
+}
+
+export interface CaseDashboardData {
+  case: CaseItem;
+  stats: CaseDashboardStats;
+}
+
 export interface ServiceHealth {
   name: string;
   label: string;
@@ -383,7 +404,7 @@ export interface DeliveryVersion {
   case_id: string;
   summary_id: string | null;
   review_id: string | null;
-  kind: "summary" | "contract_review";
+  kind: "summary" | "contract_review" | "litigation_document";
   version_id: string;
   summary_title: string;
   version_number: number;
@@ -483,4 +504,65 @@ export interface SummarySourcesUpdate {
   add: SourceReference[];
   remove: string[];
   confirm_remove?: boolean;
+}
+
+// ---- 诉讼文书起草 ----
+
+export type LitigationDocType = "complaint" | "defense" | "representation" | "legal_opinion";
+
+export interface LitigationDocument {
+  id: string;
+  case_id: string;
+  doc_type: LitigationDocType;
+  title: string;
+  parties: string;
+  claims: string;
+  facts: string;
+  focus_points: string;
+  current_version_id: string | null;
+  current_version_number: number | null;
+  current_sources: LawSource[];
+  latest_task_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LitigationDocumentVersion {
+  id: string;
+  document_id: string;
+  version_number: number;
+  status: "draft" | "edited" | "confirmed";
+  body: string;
+  citations: Record<string, LawSource>;
+  base_version_id: string | null;
+  task_id: string | null;
+  attempt_id: string | null;
+  generator_provider: string | null;
+  requested_provider: string | null;
+  actual_model: string | null;
+  coverage: Record<string, unknown>;
+  saved_at: string;
+  confirmed_at: string | null;
+}
+
+export interface LitigationDocumentList {
+  items: LitigationDocument[];
+  total: number;
+}
+
+export interface LitigationDocumentDetail {
+  document: LitigationDocument;
+  sources: LawSource[];
+  current_version: LitigationDocumentVersion | null;
+  versions: LitigationDocumentVersion[];
+  issues: CitationIssue[];
+}
+
+export interface LitigationDocumentCreate {
+  doc_type: LitigationDocType;
+  title: string;
+  parties: string;
+  claims: string;
+  facts: string;
+  focus_points: string;
 }

@@ -1,6 +1,7 @@
 import type {
   AffectedCitation,
   Capabilities,
+  CaseDashboardData,
   CaseItem,
   CaseList,
   ContractReviewCreate,
@@ -10,6 +11,9 @@ import type {
   DeliveryVersion,
   DemoOutcome,
   EvidenceDetail,
+  LitigationDocumentCreate,
+  LitigationDocumentDetail,
+  LitigationDocumentList,
   Material,
   MaterialDetail,
   MaterialList,
@@ -100,6 +104,8 @@ export const api = {
     request<CaseItem>(`/api/cases/${caseId}/open`, { method: "POST" }),
   archiveCase: (caseId: string) =>
     request<CaseItem>(`/api/cases/${caseId}/archive`, { method: "POST" }),
+  caseDashboard: (caseId: string) =>
+    request<CaseDashboardData>(`/api/cases/${caseId}/dashboard`),
   listMaterials: (caseId: string) => request<MaterialList>(`/api/cases/${caseId}/materials`),
   uploadMaterial: (caseId: string, file: File, confirmDuplicate: boolean, idempotencyKey: string) => {
     const body = new FormData();
@@ -176,6 +182,33 @@ export const api = {
     request<TaskDetail>(`/api/reviews/${reviewId}/generate`, {
       method: "POST",
       headers: clientRequestId ? { "Idempotency-Key": clientRequestId } : undefined,
+    }),
+  // ---- 诉讼文书起草 ----
+  listLitigationDocs: (caseId: string) =>
+    request<LitigationDocumentList>(`/api/cases/${caseId}/litigation-docs`),
+  createLitigationDoc: (caseId: string, payload: LitigationDocumentCreate) =>
+    request<LitigationDocumentDetail>(`/api/cases/${caseId}/litigation-docs`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getLitigationDoc: (docId: string) =>
+    request<LitigationDocumentDetail>(`/api/litigation-docs/${docId}`),
+  saveLitigationVersion: (docId: string, body: string, baseVersionId?: string) =>
+    request<LitigationDocumentDetail>(`/api/litigation-docs/${docId}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ body, base_version_id: baseVersionId ?? null }),
+    }),
+  generateLitigation: (docId: string, clientRequestId?: string) =>
+    request<TaskItem>(`/api/litigation-docs/${docId}/generate`, {
+      method: "POST",
+      headers: clientRequestId ? { "Idempotency-Key": clientRequestId } : undefined,
+    }),
+  confirmLitigation: (docId: string) =>
+    request<LitigationDocumentDetail>(`/api/litigation-docs/${docId}/confirm`, { method: "POST" }),
+  createLitigationExport: (docId: string, format: "markdown" | "docx", keepIssues: boolean) =>
+    request<DeliveryVersion>(`/api/litigation-docs/${docId}/exports`, {
+      method: "POST",
+      body: JSON.stringify({ format, keep_issues: keepIssues }),
     }),
   listTasks: (caseId?: string) =>
     request<TaskList>(`/api/tasks${caseId ? `?case_id=${encodeURIComponent(caseId)}` : ""}`),

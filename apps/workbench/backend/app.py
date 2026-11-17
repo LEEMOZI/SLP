@@ -85,6 +85,18 @@ from .contract_reviews import (
     ReviewHandler,
     validate_version as validate_review_version,
 )
+from .litigation_documents import (
+    LitigationDocumentConfirmationError,
+    LitigationDocumentCreate,
+    LitigationDocumentDetail,
+    LitigationDocumentList,
+    LitigationDocumentNotFoundError,
+    LitigationDocumentRepository,
+    LitigationDocumentValidationError,
+    LitigationDocumentVersionCreate,
+    LitigationHandler,
+    validate_version as validate_litigation_version,
+)
 from .task_demo import DemoTaskCreate, register_demo_handler
 from .task_service import TaskService
 from .tasks import (
@@ -150,6 +162,13 @@ def create_app(
         capability_gateway,
     )
     task_service.register_handler("review", review_handler)
+    litigation_document_repository = LitigationDocumentRepository(repository)
+    litigation_handler = LitigationHandler(
+        litigation_document_repository,
+        task_service.repository,
+        capability_gateway,
+    )
+    task_service.register_handler("litigation", litigation_handler)
     delivery_repository = DeliveryRepository(repository)
     delivery_storage = DeliveryStorage(data_dir)
     if enable_task_demo:
@@ -239,6 +258,32 @@ def create_app(
                 status_code=422,
                 detail={
                     "code": "contract_review_validation_failed",
+                    "message": str(error),
+                },
+            ) from error
+        raise_task_error(error)
+
+    def raise_litigation_error(error):
+        if isinstance(error, LitigationDocumentNotFoundError):
+            raise HTTPException(status_code=404, detail="诉讼文书不存在") from error
+        if isinstance(error, TaskCaseNotFoundError):
+            raise HTTPException(status_code=404, detail="案件不存在") from error
+        if isinstance(error, CaseArchivedError):
+            raise HTTPException(status_code=409, detail="案件已归档，诉讼文书为只读") from error
+        if isinstance(error, LitigationDocumentConfirmationError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "litigation_validation_failed",
+                    "message": "诉讼文书仍存在引用或内容问题",
+                    "issues": [item.model_dump() for item in error.issues],
+                },
+            ) from error
+        if isinstance(error, LitigationDocumentValidationError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "litigation_validation_failed",
                     "message": str(error),
                 },
             ) from error
@@ -624,6 +669,193 @@ def create_app(
         ) as error:
             raise_review_error(error)
 
+    # ---- 诉讼文书起草路由 ----
+
+    @app.post(
+        "/api/cases/{case_id}/litigation-docs",
+        response_model=LitigationDocumentDetail,
+        status_code=201,
+    )
+    def create_litigation_doc(case_id: str, payload: LitigationDocumentCreate):
+        try:
+            litigation_document_repository.require_case(case_id, writable=True)
+            doc = litigation_document_repository.create(
+                case_id,
+                doc_type=payload.doc_type,
+                title=payload.title,
+                parties=payload.parties,
+                claims=payload.claims,
+                facts=payload.facts,
+                focus_points=payload.focus_points,
+            )
+            return litigation_document_repository.detail(doc.id)
+        except (
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            LitigationDocumentValidationError,
+        ) as error:
+            raise_litigation_error(error)
+
+    @app.get(
+        "/api/cases/{case_id}/litigation-docs",
+        response_model=LitigationDocumentList,
+    )
+    def list_litigation_docs(case_id: str):
+        try:
+            litigation_document_repository.require_case(case_id)
+        except TaskCaseNotFoundError as error:
+            raise_litigation_error(error)
+        items = litigation_document_repository.list(case_id)
+        return LitigationDocumentList(items=items, total=len(items))
+
+    @app.get(
+        "/api/litigation-docs/{doc_id}",
+        response_model=LitigationDocumentDetail,
+    )
+    def get_litigation_doc(doc_id: str):
+        try:
+            return litigation_document_repository.detail(doc_id)
+        except LitigationDocumentNotFoundError as error:
+            raise_litigation_error(error)
+
+    @app.post(
+        "/api/litigation-docs/{doc_id}/versions",
+        response_model=LitigationDocumentDetail,
+        status_code=201,
+    )
+    def save_litigation_version(doc_id: str, payload: LitigationDocumentVersionCreate):
+        try:
+            doc = litigation_document_repository.get(doc_id)
+            litigation_document_repository.require_case(doc.case_id, writable=True)
+            litigation_document_repository.save_manual_version(
+                doc_id,
+                body=payload.body,
+                base_version_id=payload.base_version_id,
+            )
+            return litigation_document_repository.detail(doc_id)
+        except LitigationDocumentNotFoundError as error:
+            raise_litigation_error(error)
+        except (TaskCaseNotFoundError, CaseArchivedError) as error:
+            raise_litigation_error(error)
+
+    @app.post(
+        "/api/litigation-docs/{doc_id}/generate",
+        response_model=Task,
+        status_code=201,
+    )
+    async def generate_litigation_doc(
+        doc_id: str,
+        client_request_id: Optional[str] = Header(default=None),
+    ):
+        try:
+            doc = litigation_document_repository.get(doc_id)
+            litigation_document_repository.require_case(doc.case_id, writable=True)
+            snapshot = litigation_handler.prepare(doc_id)
+            task = await task_service.create_task(
+                case_id=doc.case_id,
+                task_type="litigation",
+                title=f"诉讼文书起草：{doc.title}",
+                input_snapshot=snapshot,
+                model_role="litigation_drafting",
+                client_request_id=client_request_id,
+            )
+            return task
+        except (
+            LitigationDocumentNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            LitigationDocumentValidationError,
+            TaskStateError,
+            TaskIdempotencyConflictError,
+        ) as error:
+            raise_litigation_error(error)
+
+    @app.post(
+        "/api/litigation-docs/{doc_id}/confirm",
+        response_model=LitigationDocumentDetail,
+    )
+    def confirm_litigation_doc(doc_id: str):
+        try:
+            doc = litigation_document_repository.get(doc_id)
+            litigation_document_repository.require_case(doc.case_id, writable=True)
+            return litigation_document_repository.confirm(doc_id)
+        except (
+            LitigationDocumentNotFoundError,
+            CaseArchivedError,
+            LitigationDocumentConfirmationError,
+        ) as error:
+            raise_litigation_error(error)
+
+    @app.post(
+        "/api/litigation-docs/{doc_id}/exports",
+        response_model=DeliveryVersion,
+        status_code=201,
+    )
+    def export_litigation_doc(doc_id: str, payload: ExportCreate):
+        try:
+            doc = litigation_document_repository.get(doc_id)
+            litigation_document_repository.require_case(doc.case_id, writable=True)
+            detail = litigation_document_repository.detail(doc_id)
+            version = detail.current_version
+            if version is None or version.status != "confirmed":
+                raise LitigationDocumentValidationError(
+                    "当前版本未确认，不能导出；请先确认版本"
+                )
+            issues = validate_litigation_version(doc, version)
+            if issues and not payload.keep_issues:
+                raise LitigationDocumentConfirmationError(issues)
+            status = "draft" if issues else "official"
+            exported_at = utc_now()
+            if payload.format == "markdown":
+                content = render_review_markdown(
+                    doc.title,
+                    doc.doc_type,
+                    doc.focus_points,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                ).encode("utf-8")
+            else:
+                content = render_review_docx(
+                    doc.title,
+                    doc.doc_type,
+                    doc.focus_points,
+                    version,
+                    status,
+                    issues,
+                    exported_at,
+                )
+            delivery_id = new_id()
+            storage = delivery_storage.save(delivery_id, payload.format, content)
+            return delivery_repository.create(
+                delivery_id=delivery_id,
+                case_id=doc.case_id,
+                summary_id=None,
+                review_id=None,
+                kind="litigation_document",
+                version_id=version.id,
+                summary_title=doc.title,
+                version_number=version.version_number,
+                fmt=payload.format,
+                status=status,
+                storage=storage,
+                facts={},
+                issues=issues,
+                exported_at=exported_at,
+                generator_provider=version.generator_provider,
+                actual_model=version.actual_model,
+                task_id=version.task_id,
+            )
+        except (
+            LitigationDocumentNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            LitigationDocumentValidationError,
+            LitigationDocumentConfirmationError,
+        ) as error:
+            raise_litigation_error(error)
+
     @app.post(
         "/api/summaries/{summary_id}/exports",
         response_model=DeliveryVersion,
@@ -820,6 +1052,56 @@ def create_app(
         if case is None:
             raise HTTPException(status_code=404, detail="案件不存在")
         return case
+
+    @app.get("/api/cases/{case_id}/dashboard")
+    def case_dashboard(case_id: str):
+        """案件概览：聚合材料、检索、摘要、审查、文书、任务、交付的统计。"""
+        case = repository.get(case_id)
+        if case is None:
+            raise HTTPException(status_code=404, detail="案件不存在")
+        with repository.connect() as conn:
+            def _count(table: str, extra: str = "") -> int:
+                sql = f"SELECT COUNT(*) AS c FROM {table} WHERE case_id = ?"
+                if extra:
+                    sql += f" AND {extra}"
+                row = conn.execute(sql, (case_id,)).fetchone()
+                return row["c"] if row else 0
+
+            materials = _count("materials")
+            searches = _count("searches")
+            summaries = _count("research_summaries")
+            summaries_confirmed = _count("research_summaries", "status = 'confirmed'")
+            reviews = _count("contract_reviews")
+            reviews_confirmed = _count("contract_reviews", "current_status = 'confirmed'")
+            litigation_docs = _count("litigation_documents")
+            litigation_confirmed = _count(
+                "litigation_documents",
+                "current_version_id IS NOT NULL",
+            )
+            tasks_total = _count("tasks")
+            tasks_running = _count("tasks", "status IN ('queued', 'running')")
+            tasks_completed = _count("tasks", "status = 'completed'")
+            tasks_failed = _count("tasks", "status = 'failed'")
+            deliveries = _count("delivery_versions")
+
+        return {
+            "case": case.model_dump(),
+            "stats": {
+                "materials": materials,
+                "searches": searches,
+                "summaries": summaries,
+                "summaries_confirmed": summaries_confirmed,
+                "reviews": reviews,
+                "reviews_confirmed": reviews_confirmed,
+                "litigation_docs": litigation_docs,
+                "litigation_confirmed": litigation_confirmed,
+                "tasks_total": tasks_total,
+                "tasks_running": tasks_running,
+                "tasks_completed": tasks_completed,
+                "tasks_failed": tasks_failed,
+                "deliveries": deliveries,
+            },
+        }
 
     @app.get("/api/tasks", response_model=TaskList)
     def list_tasks(case_id: Optional[str] = Query(default=None)):

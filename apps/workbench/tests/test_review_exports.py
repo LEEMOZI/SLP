@@ -95,7 +95,7 @@ def test_v7_migration_upgrades_delivery_tables(repository):
         assert {
             row[0]
             for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
-        } == {1, 2, 3, 4, 5, 6, 7}
+        } == {1, 2, 3, 4, 5, 6, 7, 8}
 
 
 def test_unconfirmed_review_cannot_export(review_export_client):

@@ -1,13 +1,15 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import CaseDashboard from "./CaseDashboard";
 import ContractReviewPanel from "./ContractReviewPanel";
+import LitigationDraftingPanel from "./LitigationDraftingPanel";
 import MaterialsPanel from "./MaterialsPanel";
 import ResearchPanel from "./ResearchPanel";
 import SearchPanel from "./SearchPanel";
 import TaskCenter from "./TaskCenter";
 import type { CaseItem, ReadinessReport, SourceReference, TaskItem } from "./types";
 
-type WorkspaceTab = "materials" | "search" | "research" | "contract" | "tasks";
+type WorkspaceTab = "materials" | "search" | "research" | "contract" | "litigation" | "tasks";
 
 function formatDate(value: string | null) {
   if (!value) return "尚未打开";
@@ -315,11 +317,13 @@ export default function App() {
                   <div><span>最近打开</span><strong>{formatDate(selectedCase.last_opened_at)}</strong></div>
                   <div><span>最近更新</span><strong>{formatDate(selectedCase.updated_at)}</strong></div>
                 </div>
+                <CaseDashboard caseId={selectedCase.id} refreshToken={researchRefreshToken} />
                 <div className="workspace-tabs" role="tablist" aria-label="案件功能">
                   <button type="button" role="tab" aria-selected={workspaceTab === "materials"} className={workspaceTab === "materials" ? "active" : ""} onClick={() => { setWorkspaceTab("materials"); setRetryTask(null); }}>材料</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "search"} className={workspaceTab === "search" ? "active" : ""} onClick={() => { setWorkspaceTab("search"); setRetryTask(null); }}>检索</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "research"} className={workspaceTab === "research" ? "active" : ""} onClick={() => { setWorkspaceTab("research"); setRetryTask(null); }}>研究</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "contract"} className={workspaceTab === "contract" ? "active" : ""} onClick={() => { setWorkspaceTab("contract"); setRetryTask(null); }}>合同审查</button>
+                  <button type="button" role="tab" aria-selected={workspaceTab === "litigation"} className={workspaceTab === "litigation" ? "active" : ""} onClick={() => { setWorkspaceTab("litigation"); setRetryTask(null); }}>诉讼文书</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "tasks"} className={workspaceTab === "tasks" ? "active" : ""} onClick={() => { setWorkspaceTab("tasks"); setRetryTask(null); }}>任务</button>
                 </div>
                 <div className="workspace-tab-content" role="tabpanel">
@@ -358,6 +362,13 @@ export default function App() {
                   )}
                   {workspaceTab === "contract" && (
                     <ContractReviewPanel
+                      caseId={selectedCase.id}
+                      archived={Boolean(selectedCase.archived_at)}
+                      refreshToken={researchRefreshToken}
+                    />
+                  )}
+                  {workspaceTab === "litigation" && (
+                    <LitigationDraftingPanel
                       caseId={selectedCase.id}
                       archived={Boolean(selectedCase.archived_at)}
                       refreshToken={researchRefreshToken}
