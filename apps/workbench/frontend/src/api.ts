@@ -1,4 +1,5 @@
 import type {
+  AffectedCitation,
   Capabilities,
   CaseItem,
   CaseList,
@@ -9,10 +10,15 @@ import type {
   MaterialList,
   MaterialUploadResult,
   ReadinessReport,
+  CitationIssue,
   SearchAttemptView,
   SearchCreate,
   SearchHistory,
   SegmentList,
+  SummaryCreate,
+  SummaryDetail,
+  SummaryList,
+  SummarySourcesUpdate,
   TaskDetail,
   TaskItem,
   TaskList,
@@ -22,13 +28,24 @@ export class ApiRequestError extends Error {
   status: number;
   code: string | null;
   duplicates: Material[];
+  affected: AffectedCitation[];
+  issues: CitationIssue[];
 
-  constructor(message: string, status: number, code: string | null = null, duplicates: Material[] = []) {
+  constructor(
+    message: string,
+    status: number,
+    code: string | null = null,
+    duplicates: Material[] = [],
+    affected: AffectedCitation[] = [],
+    issues: CitationIssue[] = [],
+  ) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
     this.duplicates = duplicates;
+    this.affected = affected;
+    this.issues = issues;
   }
 }
 
@@ -42,6 +59,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     let message = `请求失败（${response.status}）`;
     let code: string | null = null;
     let duplicates: Material[] = [];
+    let affected: AffectedCitation[] = [];
+    let issues: CitationIssue[] = [];
     try {
       const payload = await response.json();
       if (typeof payload.detail === "string") {
@@ -50,11 +69,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
         if (typeof payload.detail.message === "string") message = payload.detail.message;
         if (typeof payload.detail.code === "string") code = payload.detail.code;
         if (Array.isArray(payload.detail.duplicates)) duplicates = payload.detail.duplicates;
+        if (Array.isArray(payload.detail.affected)) affected = payload.detail.affected;
+        if (Array.isArray(payload.detail.issues)) issues = payload.detail.issues;
       }
     } catch {
       // 保留 HTTP 状态错误。
     }
-    throw new ApiRequestError(message, response.status, code, duplicates);
+    throw new ApiRequestError(message, response.status, code, duplicates, affected, issues);
   }
   return response.json() as Promise<T>;
 }
@@ -98,6 +119,30 @@ export const api = {
   getSearchAttempt: (taskId: string, attemptId: string) =>
     request<SearchAttemptView>(`/api/searches/${taskId}/attempts/${attemptId}`),
   getEvidence: (evidenceId: string) => request<EvidenceDetail>(`/api/evidence/${evidenceId}`),
+  createSummary: (caseId: string, payload: SummaryCreate) =>
+    request<SummaryDetail>(`/api/cases/${caseId}/summaries`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  listSummaries: (caseId: string) => request<SummaryList>(`/api/cases/${caseId}/summaries`),
+  getSummary: (summaryId: string) => request<SummaryDetail>(`/api/summaries/${summaryId}`),
+  updateSummarySources: (summaryId: string, payload: SummarySourcesUpdate) =>
+    request<SummaryDetail>(`/api/summaries/${summaryId}/sources`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  saveSummaryVersion: (summaryId: string, body: string, baseVersionId: string | null) =>
+    request<SummaryDetail>(`/api/summaries/${summaryId}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ body, base_version_id: baseVersionId }),
+    }),
+  generateSummary: (summaryId: string, idempotencyKey: string) =>
+    request<TaskItem>(`/api/summaries/${summaryId}/generate`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+    }),
+  confirmSummary: (summaryId: string) =>
+    request<SummaryDetail>(`/api/summaries/${summaryId}/confirm`, { method: "POST" }),
   listTasks: (caseId?: string) =>
     request<TaskList>(`/api/tasks${caseId ? `?case_id=${encodeURIComponent(caseId)}` : ""}`),
   getTask: (taskId: string) => request<TaskDetail>(`/api/tasks/${taskId}`),

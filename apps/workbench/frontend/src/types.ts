@@ -109,6 +109,10 @@ export interface Capabilities {
     };
   };
   sources: Array<{ id: string; status: string }>;
+  summary?: {
+    default_provider: string;
+    providers: Array<{ id: string; status: string }>;
+  };
 }
 
 export type MaterialStatus =
@@ -292,4 +296,96 @@ export interface EvidenceDetail {
   evidence: EvidenceItem;
   document: EvidenceDocument | null;
   source_error: string | null;
+}
+
+export interface SourceReference {
+  kind: "evidence" | "material_segment";
+  id: string;
+}
+
+export interface SummarySource {
+  handle: string;
+  kind: "evidence" | "material_segment";
+  source_id: string;
+  case_id: string;
+  title: string;
+  text: string;
+  locator: Record<string, unknown>;
+  source_label: string;
+  origin_status: string;
+  attempt_id: string | null;
+  task_id: string | null;
+  material_id: string | null;
+  parse_version_id: string | null;
+  sequence: number | null;
+  source_ref: Record<string, unknown>;
+}
+
+export interface ResearchSummary {
+  id: string;
+  case_id: string;
+  title: string;
+  question: string;
+  current_version_id: string | null;
+  current_version_number: number | null;
+  current_sources: SummarySource[];
+  latest_task_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SummaryVersion {
+  id: string;
+  summary_id: string;
+  version_number: number;
+  status: "draft" | "edited" | "confirmed";
+  body: string;
+  citations: Record<string, SummarySource>;
+  base_version_id: string | null;
+  task_id: string | null;
+  attempt_id: string | null;
+  generator_provider: string | null;
+  requested_provider: string | null;
+  actual_model: string | null;
+  coverage: Record<string, unknown>;
+  saved_at: string;
+  confirmed_at: string | null;
+}
+
+export interface CitationIssue {
+  code: string;
+  message: string;
+  handle: string | null;
+}
+
+export interface AffectedCitation {
+  handle: string;
+  version_id: string;
+  version_number: number;
+}
+
+export interface SummaryDetail {
+  summary: ResearchSummary;
+  sources: SummarySource[];
+  current_version: SummaryVersion | null;
+  versions: SummaryVersion[];
+  coverage: Record<string, unknown>;
+  issues: CitationIssue[];
+}
+
+export interface SummaryList {
+  items: ResearchSummary[];
+  total: number;
+}
+
+export interface SummaryCreate {
+  title: string;
+  question: string;
+  sources: SourceReference[];
+}
+
+export interface SummarySourcesUpdate {
+  add: SourceReference[];
+  remove: string[];
+  confirm_remove?: boolean;
 }

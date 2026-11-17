@@ -24,6 +24,7 @@ const taskTypeLabels: Record<string, string> = {
   search: "统一检索",
   parse: "材料解析",
   generation: "内容生成",
+  summarize: "研究摘要",
 };
 
 const demoOutcomes: Array<{ value: DemoOutcome; label: string }> = [
@@ -304,7 +305,7 @@ export default function TaskCenter({ cases, caseId, onRetryTask }: TaskCenterPro
               )}
               {["failed", "partial", "cancelled", "recovery_pending"].includes(task.status) && !cases.some((item) => item.id === task.case_id && item.archived_at) && (
                 <button className="button primary" type="button" disabled={actionId !== null} onClick={() => {
-                  if (task.task_type === "parse" || task.task_type === "search") {
+                  if (task.task_type === "parse" || task.task_type === "search" || task.task_type === "summarize") {
                     onRetryTask(task);
                   } else {
                     setRetryTask(task);

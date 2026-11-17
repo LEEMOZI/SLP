@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import type { EvidenceDetail, EvidenceItem, SearchAttemptView } from "./types";
+import SourcePreview, { locatorText } from "./SourcePreview";
+import type { EvidenceDetail, EvidenceItem, SearchAttemptView, SourceReference } from "./types";
 
 const sourceLabels: Record<string, string> = {
   law: "法规",
@@ -22,22 +23,23 @@ const statusLabels: Record<string, string> = {
   failed: "失败",
 };
 
-function locatorText(locator: Record<string, unknown>) {
-  const labels: Record<string, string> = {
-    article: "条文",
-    page: "页码",
-    year: "年份",
-    rowid: "文书定位",
-    paragraph: "段落",
-    line_start: "起始行",
-    line_end: "结束行",
-  };
-  return Object.entries(locator)
-    .map(([key, value]) => `${labels[key] || key} ${String(value)}`)
-    .join(" · ") || "无定位信息";
+interface EvidencePanelProps {
+  attempt: SearchAttemptView;
+  archived: boolean;
+  stagedSources: SourceReference[];
+  adding: boolean;
+  onToggleSource: (source: SourceReference) => void;
+  onAddSources: (sources: SourceReference[]) => void;
 }
 
-export default function EvidencePanel({ attempt }: { attempt: SearchAttemptView }) {
+export default function EvidencePanel({
+  attempt,
+  archived,
+  stagedSources,
+  adding,
+  onToggleSource,
+  onAddSources,
+}: EvidencePanelProps) {
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
   const [detail, setDetail] = useState<EvidenceDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,6 +74,8 @@ export default function EvidencePanel({ attempt }: { attempt: SearchAttemptView 
 
   const sources = Object.values(attempt.sources || {});
   const evidenceCount = Object.values(attempt.evidence || {}).reduce((total, items) => total + items.length, 0);
+  const selectedKeys = new Set(stagedSources.map((source) => `${source.kind}:${source.id}`));
+  const stagedEvidence = stagedSources.filter((source) => source.kind === "evidence");
 
   return (
     <div className="evidence-panel">
@@ -117,6 +121,14 @@ export default function EvidencePanel({ attempt }: { attempt: SearchAttemptView 
 
       <section className="evidence-results" aria-labelledby="evidence-results-title">
         <div className="result-section-heading"><h4 id="evidence-results-title">证据结果</h4><span>按本次 Attempt 隔离保存</span></div>
+        {!archived && evidenceCount > 0 && (
+          <div className="evidence-research-toolbar">
+            <span>勾选可跨 Attempt 累积；新 Attempt 不会自动加入研究。</span>
+            <button className="button secondary" type="button" disabled={adding || stagedEvidence.length === 0} onClick={() => onAddSources(stagedEvidence)}>
+              {adding ? "正在加入…" : `加入研究（${stagedEvidence.length}）`}
+            </button>
+          </div>
+        )}
         {evidenceCount === 0 ? (
           <div className="empty-state compact"><strong>{sources.some((source) => source.status === "running") ? "正在检索来源" : "本次没有可用证据"}</strong><span>零命中与来源失败分别展示，不会生成推测性摘要。</span></div>
         ) : (["law", "cases", "reference"] as const).map((group) => {
@@ -126,7 +138,17 @@ export default function EvidencePanel({ attempt }: { attempt: SearchAttemptView 
             <div className="evidence-group" key={group}>
               <h5>{groupLabels[group]}<span>{items.length}</span></h5>
               <div className="evidence-card-list">
-                {items.map((item) => <EvidenceCard item={item} selected={selectedEvidenceId === item.id} onSelect={() => setSelectedEvidenceId(item.id)} key={item.id} />)}
+                {items.map((item) => (
+                  <EvidenceCard
+                    item={item}
+                    selected={selectedEvidenceId === item.id}
+                    staged={selectedKeys.has(`evidence:${item.id}`)}
+                    archived={archived}
+                    onSelect={() => setSelectedEvidenceId(item.id)}
+                    onToggle={() => onToggleSource({ kind: "evidence", id: item.id })}
+                    key={item.id}
+                  />
+                ))}
               </div>
             </div>
           );
@@ -136,28 +158,52 @@ export default function EvidencePanel({ attempt }: { attempt: SearchAttemptView 
       {error && <p className="task-error" role="alert">{error}</p>}
       {loading && <div className="empty-state compact">正在读取证据原文…</div>}
       {detail && selectedEvidenceId === detail.evidence.id && (
-        <section className="evidence-detail" aria-labelledby="evidence-detail-title">
-          <div className="evidence-detail-heading"><div><span className="eyebrow">SOURCE VERIFICATION</span><h4 id="evidence-detail-title">{detail.evidence.title}</h4></div><button className="icon-button" type="button" onClick={() => setSelectedEvidenceId(null)} aria-label="关闭证据详情">×</button></div>
-          <div className="evidence-detail-meta"><span>{detail.evidence.source_label}</span><span>{locatorText(detail.evidence.locator)}</span>{detail.document?.cached && <span>不可变原文缓存</span>}</div>
-          <div className="hit-reason"><strong>命中原因</strong><p>{detail.evidence.hit_reason}</p><span>{detail.evidence.match_type}{detail.evidence.partial_match ? " · 部分匹配" : " · 完整匹配"}{detail.evidence.score !== null ? ` · 分数 ${detail.evidence.score}` : ""}</span></div>
-          {detail.source_error && <p className="coverage-warning">{detail.source_error}；当前摘录与定位仍可核验。</p>}
-          <div className="document-content"><strong>{detail.document ? "来源原文" : "已保存内容"}</strong><pre>{detail.document?.content || detail.evidence.content || detail.evidence.excerpt || "来源未返回正文"}</pre></div>
-          <details className="coverage-details"><summary>来源引用与元数据</summary><pre>{JSON.stringify({ source_ref: detail.evidence.source_ref, metadata: detail.evidence.metadata, document: detail.document?.metadata || null }, null, 2)}</pre></details>
-        </section>
+        <SourcePreview
+          title={detail.evidence.title}
+          sourceLabel={detail.evidence.source_label}
+          locator={detail.evidence.locator}
+          text={detail.document?.content || detail.evidence.content || detail.evidence.excerpt}
+          contentLabel={detail.document ? "来源原文" : "已保存内容"}
+          cached={detail.document?.cached}
+          sourceError={detail.source_error ? `${detail.source_error}；当前摘录与定位仍可核验。` : null}
+          hitReason={detail.evidence.hit_reason}
+          matchType={detail.evidence.match_type}
+          partialMatch={detail.evidence.partial_match}
+          score={detail.evidence.score}
+          details={{ source_ref: detail.evidence.source_ref, metadata: detail.evidence.metadata, document: detail.document?.metadata || null }}
+          onClose={() => setSelectedEvidenceId(null)}
+        />
       )}
     </div>
   );
 }
 
-function EvidenceCard({ item, selected, onSelect }: { item: EvidenceItem; selected: boolean; onSelect: () => void }) {
+interface EvidenceCardProps {
+  item: EvidenceItem;
+  selected: boolean;
+  staged: boolean;
+  archived: boolean;
+  onSelect: () => void;
+  onToggle: () => void;
+}
+
+function EvidenceCard({ item, selected, staged, archived, onSelect, onToggle }: EvidenceCardProps) {
   return (
-    <button type="button" className={`evidence-card ${selected ? "selected" : ""}`} onClick={onSelect}>
+    <article className={`evidence-card ${selected ? "selected" : ""} ${staged ? "staged" : ""}`}>
       <div className="evidence-card-top"><span>#{item.rank} · {sourceLabels[item.source] || item.source}</span>{item.partial_match && <span className="partial-badge">部分匹配</span>}</div>
-      <strong>{item.title}</strong>
-      <small>{item.source_label}</small>
-      <p>{item.excerpt || item.content || "无摘录，打开查看来源信息"}</p>
-      <div className="evidence-hit"><span>命中：{item.hit_reason}</span><span>{locatorText(item.locator)}</span></div>
-      <span className="evidence-open">查看定位与原文</span>
-    </button>
+      <button type="button" className="evidence-card-content" onClick={onSelect}>
+        <strong>{item.title}</strong>
+        <small>{item.source_label}</small>
+        <p>{item.excerpt || item.content || "无摘录，打开查看来源信息"}</p>
+        <div className="evidence-hit"><span>命中：{item.hit_reason}</span><span>{locatorText(item.locator)}</span></div>
+        <span className="evidence-open">查看定位与原文</span>
+      </button>
+      {!archived && (
+        <label className="evidence-select">
+          <input type="checkbox" checked={staged} onChange={onToggle} />
+          {staged ? "已加入待处理选择" : "选择加入研究"}
+        </label>
+      )}
+    </article>
   );
 }

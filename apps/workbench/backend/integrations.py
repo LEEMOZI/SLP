@@ -75,6 +75,27 @@ class CapabilityGateway:
         except (httpx.HTTPError, ValueError) as error:
             raise CapabilityError("检索服务暂不可用") from error
 
+    async def generate_summary(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            response = await self.client.post("/v1/summaries", json=payload)
+            if response.status_code != 200:
+                message = "摘要生成服务请求失败"
+                try:
+                    detail = response.json().get("detail")
+                    if isinstance(detail, dict) and isinstance(detail.get("message"), str):
+                        message = detail["message"]
+                except (ValueError, AttributeError):
+                    pass
+                raise CapabilityError(message)
+            result = response.json()
+            if not isinstance(result, dict):
+                raise CapabilityError("摘要生成服务返回了无效结果")
+            return result
+        except CapabilityError:
+            raise
+        except (httpx.HTTPError, ValueError) as error:
+            raise CapabilityError("摘要生成服务暂不可用") from error
+
     async def judgment_source(self, year: int, rowid: int) -> Dict[str, Any]:
         try:
             response = await self.client.post(

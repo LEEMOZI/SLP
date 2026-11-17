@@ -6,6 +6,7 @@ MIGRATION_VERSIONS = {
     1: "task_creation_idempotency",
     2: "material_parse_versions",
     3: "evidence_items_and_documents",
+    4: "research_summaries",
 }
 
 
@@ -156,4 +157,51 @@ def run_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(
             "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
             (3, MIGRATION_VERSIONS[3]),
+        )
+    if 4 not in applied:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS research_summaries (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES cases(id),
+                title TEXT NOT NULL,
+                question TEXT NOT NULL DEFAULT '',
+                current_version_id TEXT,
+                current_sources TEXT NOT NULL DEFAULT '[]',
+                next_source_number INTEGER NOT NULL DEFAULT 1,
+                latest_task_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_summaries_case_updated
+            ON research_summaries(case_id, updated_at DESC);
+
+            CREATE TABLE IF NOT EXISTS research_summary_versions (
+                id TEXT PRIMARY KEY,
+                summary_id TEXT NOT NULL REFERENCES research_summaries(id),
+                version_number INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                citations TEXT NOT NULL DEFAULT '{}',
+                base_version_id TEXT,
+                task_id TEXT REFERENCES tasks(id),
+                attempt_id TEXT REFERENCES task_attempts(id),
+                generator_provider TEXT,
+                requested_provider TEXT,
+                actual_model TEXT,
+                coverage TEXT NOT NULL DEFAULT '{}',
+                saved_at TEXT NOT NULL,
+                confirmed_at TEXT,
+                UNIQUE(summary_id, version_number),
+                UNIQUE(attempt_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_summary_versions_summary
+            ON research_summary_versions(summary_id, version_number DESC);
+            CREATE INDEX IF NOT EXISTS idx_summary_versions_case
+            ON research_summary_versions(summary_id, saved_at DESC);
+            """
+        )
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (4, MIGRATION_VERSIONS[4]),
         )

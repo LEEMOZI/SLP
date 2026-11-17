@@ -7,6 +7,7 @@ import type {
   MaterialDetail,
   MaterialSegment,
   MaterialStatus,
+  SourceReference,
   TaskItem,
 } from "./types";
 
@@ -69,9 +70,11 @@ interface MaterialsPanelProps {
   archived: boolean;
   retryTask: TaskItem | null;
   onRetryHandled: () => void;
+  addingResearch: boolean;
+  onAddResearchSource: (source: SourceReference) => void;
 }
 
-export default function MaterialsPanel({ caseId, archived, retryTask, onRetryHandled }: MaterialsPanelProps) {
+export default function MaterialsPanel({ caseId, archived, retryTask, onRetryHandled, addingResearch, onAddResearchSource }: MaterialsPanelProps) {
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [capabilityError, setCapabilityError] = useState("");
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -378,6 +381,13 @@ export default function MaterialsPanel({ caseId, archived, retryTask, onRetryHan
                         <div className="segment-meta"><strong>{locatorText(segment.locator)}</strong><span>#{segment.sequence} · {segment.extraction_method || segment.status}</span></div>
                         {segment.text ? <p>{segment.text}</p> : <p className="segment-empty">未提取到文本</p>}
                         {segment.error && <div className="segment-error">{segment.error.code ? `${segment.error.code} · ` : ""}{segment.error.message || "该段解析失败"}</div>}
+                        {!archived && segment.text.trim() && ["ok", "partial"].includes(segment.status) && ["success", "partial"].includes(selectedVersion?.status || "") && (
+                          <div className="segment-actions">
+                            <button className="button secondary" type="button" disabled={addingResearch} onClick={() => onAddResearchSource({ kind: "material_segment", id: segment.id })}>
+                              {addingResearch ? "正在加入…" : "加入研究"}
+                            </button>
+                          </div>
+                        )}
                       </article>
                     ))}
                     {nextCursor !== null && selectedMaterialId && selectedVersionId && (

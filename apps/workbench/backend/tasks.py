@@ -334,6 +334,21 @@ class TaskRepository:
             task = self._get_in_connection(connection, task_id)
         return task, True
 
+    def find_by_client_request(
+        self, case_id: str, task_type: str, client_request_id: str
+    ) -> Optional[Task]:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id FROM tasks
+                WHERE case_id = ? AND task_type = ? AND client_request_id = ?
+                """,
+                (case_id, task_type, client_request_id),
+            ).fetchone()
+            if row is None:
+                return None
+            return self._get_in_connection(connection, row["id"])
+
     def begin_attempt(self, task_id: str, attempt_id: str) -> Optional[Dict[str, Any]]:
         now = utc_now()
         with self.connect() as connection:

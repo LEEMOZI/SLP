@@ -41,6 +41,19 @@ from .searches import (
     SearchNotFoundError,
     SearchValidationError,
 )
+from .summaries import (
+    SummaryConfirmationError,
+    SummaryCreate,
+    SummaryDetail,
+    SummaryHandler,
+    SummaryList,
+    SummaryNotFoundError,
+    SummaryRepository,
+    SummarySourceRemovalError,
+    SummarySourcesUpdate,
+    SummaryValidationError,
+    SummaryVersionCreate,
+)
 from .task_demo import DemoTaskCreate, register_demo_handler
 from .task_service import TaskService
 from .tasks import (
@@ -91,6 +104,13 @@ def create_app(
         capability_gateway,
     )
     task_service.register_handler("search", search_handler)
+    summary_repository = SummaryRepository(repository)
+    summary_handler = SummaryHandler(
+        summary_repository,
+        task_service.repository,
+        capability_gateway,
+    )
+    task_service.register_handler("summarize", summary_handler)
     if enable_task_demo:
         register_demo_handler(task_service)
 
@@ -111,6 +131,8 @@ def create_app(
     app.state.material_repository = material_repository
     app.state.evidence_repository = evidence_repository
     app.state.search_handler = search_handler
+    app.state.summary_repository = summary_repository
+    app.state.summary_handler = summary_handler
     app.state.capability_gateway = capability_gateway
 
     def raise_task_error(error):
@@ -125,6 +147,35 @@ def create_app(
                 detail={"code": "idempotency_conflict", "message": "请求键已用于不同内容"},
             ) from error
         raise HTTPException(status_code=409, detail=str(error)) from error
+
+    def raise_summary_error(error):
+        if isinstance(error, SummaryNotFoundError):
+            raise HTTPException(status_code=404, detail="研究摘要不存在") from error
+        if isinstance(error, TaskCaseNotFoundError):
+            raise HTTPException(status_code=404, detail="案件不存在") from error
+        if isinstance(error, CaseArchivedError):
+            raise HTTPException(status_code=409, detail="案件已归档，研究摘要为只读") from error
+        if isinstance(error, SummarySourceRemovalError):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "source_removal_requires_confirmation",
+                    "message": "移除来源会影响当前摘要引用，请确认后继续",
+                    "affected": [item.model_dump() for item in error.affected],
+                },
+            ) from error
+        if isinstance(error, SummaryConfirmationError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "summary_validation_failed",
+                    "message": "摘要仍存在引用或内容问题",
+                    "issues": [item.model_dump() for item in error.issues],
+                },
+            ) from error
+        if isinstance(error, SummaryValidationError):
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        raise_task_error(error)
 
     @app.get("/api/readiness", response_model=ReadinessReport)
     async def readiness():
@@ -291,6 +342,117 @@ def create_app(
         except EvidenceNotFoundError as error:
             raise HTTPException(status_code=404, detail="证据不存在") from error
 
+    @app.post(
+        "/api/cases/{case_id}/summaries",
+        response_model=SummaryDetail,
+        status_code=201,
+    )
+    def create_summary(case_id: str, payload: SummaryCreate):
+        try:
+            summary = summary_repository.create(case_id, payload)
+            return summary_repository.detail(summary.id)
+        except (
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            SummaryValidationError,
+        ) as error:
+            raise_summary_error(error)
+
+    @app.get("/api/cases/{case_id}/summaries", response_model=SummaryList)
+    def list_summaries(case_id: str):
+        try:
+            items = summary_repository.list(case_id)
+            return SummaryList(items=items, total=len(items))
+        except TaskCaseNotFoundError as error:
+            raise_summary_error(error)
+
+    @app.get("/api/summaries/{summary_id}", response_model=SummaryDetail)
+    def get_summary(summary_id: str):
+        try:
+            return summary_repository.detail(summary_id)
+        except SummaryNotFoundError as error:
+            raise_summary_error(error)
+
+    @app.put("/api/summaries/{summary_id}/sources", response_model=SummaryDetail)
+    def update_summary_sources(summary_id: str, payload: SummarySourcesUpdate):
+        try:
+            return summary_repository.update_sources(summary_id, payload)
+        except (
+            SummaryNotFoundError,
+            CaseArchivedError,
+            SummaryValidationError,
+            SummarySourceRemovalError,
+        ) as error:
+            raise_summary_error(error)
+
+    @app.post(
+        "/api/summaries/{summary_id}/versions",
+        response_model=SummaryDetail,
+        status_code=201,
+    )
+    def save_summary_version(summary_id: str, payload: SummaryVersionCreate):
+        try:
+            return summary_repository.save_manual_version(summary_id, payload)
+        except (
+            SummaryNotFoundError,
+            CaseArchivedError,
+            SummaryValidationError,
+        ) as error:
+            raise_summary_error(error)
+
+    @app.post("/api/summaries/{summary_id}/generate", response_model=Task, status_code=201)
+    async def generate_summary(
+        summary_id: str,
+        idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    ):
+        if idempotency_key is not None:
+            idempotency_key = idempotency_key.strip()
+            if not idempotency_key or len(idempotency_key) > 200:
+                raise HTTPException(status_code=422, detail="Idempotency-Key 无效")
+        try:
+            summary = summary_repository.get(summary_id)
+            summary_repository.require_case(summary.case_id, writable=True)
+            if idempotency_key is not None:
+                existing = task_service.repository.find_by_client_request(
+                    summary.case_id, "summarize", idempotency_key
+                )
+                if existing is not None:
+                    if existing.input_snapshot.get("summary_id") != summary_id:
+                        raise TaskIdempotencyConflictError(idempotency_key)
+                    summary_repository.attach_task(summary_id, existing.id)
+                    return existing
+            snapshot = summary_handler.prepare(summary_id)
+            task = await task_service.create_task(
+                case_id=summary.case_id,
+                task_type="summarize",
+                title=f"生成研究摘要：{summary.title}",
+                model_role="research_summary",
+                input_snapshot=snapshot,
+                client_request_id=idempotency_key,
+            )
+            summary_repository.attach_task(summary_id, task.id)
+            return task
+        except (
+            SummaryNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            SummaryValidationError,
+            TaskStateError,
+            TaskIdempotencyConflictError,
+        ) as error:
+            raise_summary_error(error)
+
+    @app.post("/api/summaries/{summary_id}/confirm", response_model=SummaryDetail)
+    def confirm_summary(summary_id: str):
+        try:
+            return summary_repository.confirm(summary_id)
+        except (
+            SummaryNotFoundError,
+            CaseArchivedError,
+            SummaryConfirmationError,
+        ) as error:
+            raise_summary_error(error)
+
     @app.get("/api/cases", response_model=CaseList)
     def list_cases(include_archived: bool = Query(default=False)):
         items = repository.list(include_archived=include_archived)
@@ -354,8 +516,10 @@ def create_app(
                 task = task_service.repository.get(task_id)
                 if task.task_type == "search":
                     scope = search_handler.normalize_retry(task.case_id, task.input_snapshot, scope)
+                elif task.task_type == "summarize":
+                    scope = summary_handler.normalize_retry(scope)
             return await task_service.retry(task_id, scope=scope)
-        except SearchValidationError as error:
+        except (SearchValidationError, SummaryValidationError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except (TaskNotFoundError, CaseArchivedError, TaskStateError) as error:
             raise_task_error(error)

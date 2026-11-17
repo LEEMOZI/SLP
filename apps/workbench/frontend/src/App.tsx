@@ -1,11 +1,12 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import MaterialsPanel from "./MaterialsPanel";
+import ResearchPanel from "./ResearchPanel";
 import SearchPanel from "./SearchPanel";
 import TaskCenter from "./TaskCenter";
-import type { CaseItem, ReadinessReport, TaskItem } from "./types";
+import type { CaseItem, ReadinessReport, SourceReference, TaskItem } from "./types";
 
-type WorkspaceTab = "materials" | "search" | "tasks";
+type WorkspaceTab = "materials" | "search" | "research" | "tasks";
 
 function formatDate(value: string | null) {
   if (!value) return "尚未打开";
@@ -33,6 +34,10 @@ export default function App() {
   const [view, setView] = useState<"workspace" | "tasks">("workspace");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("materials");
   const [retryTask, setRetryTask] = useState<TaskItem | null>(null);
+  const [activeSummaryId, setActiveSummaryId] = useState<string | null>(null);
+  const [stagedSources, setStagedSources] = useState<SourceReference[]>([]);
+  const [researchRefreshToken, setResearchRefreshToken] = useState(0);
+  const [addingResearch, setAddingResearch] = useState(false);
 
   const loadCases = useCallback(async () => {
     setLoadingCases(true);
@@ -67,6 +72,12 @@ export default function App() {
   useEffect(() => {
     void loadReadiness();
   }, [loadReadiness]);
+
+  useEffect(() => {
+    setActiveSummaryId(null);
+    setStagedSources([]);
+    setResearchRefreshToken(0);
+  }, [selectedCase?.id]);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -112,6 +123,52 @@ export default function App() {
     }
   }
 
+  const handleToggleResearchSource = useCallback((source: SourceReference) => {
+    setStagedSources((current) => {
+      const exists = current.some((item) => item.kind === source.kind && item.id === source.id);
+      return exists
+        ? current.filter((item) => item.kind !== source.kind || item.id !== source.id)
+        : [...current, source];
+    });
+  }, []);
+
+  const handleAddResearchSources = useCallback((sources: SourceReference[]) => {
+    if (!selectedCase || selectedCase.archived_at || sources.length === 0 || addingResearch) return;
+    const uniqueSources = sources.filter((source, index) => sources.findIndex((item) => item.kind === source.kind && item.id === source.id) === index);
+    setWorkspaceTab("research");
+    setRetryTask(null);
+    setAddingResearch(true);
+    void (async () => {
+      try {
+        let summaryId = activeSummaryId;
+        if (!summaryId) {
+          const existing = await api.listSummaries(selectedCase.id);
+          summaryId = existing.items[0]?.id || null;
+        }
+        if (summaryId) {
+          await api.updateSummarySources(summaryId, { add: uniqueSources, remove: [] });
+        } else {
+          const created = await api.createSummary(selectedCase.id, {
+            title: "研究摘要",
+            question: "",
+            sources: uniqueSources,
+          });
+          summaryId = created.summary.id;
+        }
+        setActiveSummaryId(summaryId);
+        const addedKeys = new Set(uniqueSources.map((source) => `${source.kind}:${source.id}`));
+        setStagedSources((current) => current.filter((source) => !addedKeys.has(`${source.kind}:${source.id}`)));
+        setResearchRefreshToken((value) => value + 1);
+        setNotice(`已将 ${uniqueSources.length} 个来源加入当前研究摘要`);
+        setError("");
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "来源加入研究失败");
+      } finally {
+        setAddingResearch(false);
+      }
+    })();
+  }, [selectedCase, activeSummaryId, addingResearch]);
+
   const handleRetryTask = useCallback((task: TaskItem) => {
     const target = cases.find((item) => item.id === task.case_id);
     if (!target) {
@@ -120,7 +177,7 @@ export default function App() {
     }
     setSelectedCase(target);
     setView("workspace");
-    setWorkspaceTab(task.task_type === "parse" ? "materials" : "search");
+    setWorkspaceTab(task.task_type === "parse" ? "materials" : task.task_type === "summarize" ? "research" : "search");
     setRetryTask(task);
   }, [cases]);
 
@@ -260,6 +317,7 @@ export default function App() {
                 <div className="workspace-tabs" role="tablist" aria-label="案件功能">
                   <button type="button" role="tab" aria-selected={workspaceTab === "materials"} className={workspaceTab === "materials" ? "active" : ""} onClick={() => { setWorkspaceTab("materials"); setRetryTask(null); }}>材料</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "search"} className={workspaceTab === "search" ? "active" : ""} onClick={() => { setWorkspaceTab("search"); setRetryTask(null); }}>检索</button>
+                  <button type="button" role="tab" aria-selected={workspaceTab === "research"} className={workspaceTab === "research" ? "active" : ""} onClick={() => { setWorkspaceTab("research"); setRetryTask(null); }}>研究</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "tasks"} className={workspaceTab === "tasks" ? "active" : ""} onClick={() => { setWorkspaceTab("tasks"); setRetryTask(null); }}>任务</button>
                 </div>
                 <div className="workspace-tab-content" role="tabpanel">
@@ -269,6 +327,8 @@ export default function App() {
                       archived={Boolean(selectedCase.archived_at)}
                       retryTask={retryTask?.task_type === "parse" ? retryTask : null}
                       onRetryHandled={clearRetryRequest}
+                      addingResearch={addingResearch}
+                      onAddResearchSource={(source) => handleAddResearchSources([source])}
                     />
                   )}
                   {workspaceTab === "search" && (
@@ -276,6 +336,21 @@ export default function App() {
                       caseId={selectedCase.id}
                       archived={Boolean(selectedCase.archived_at)}
                       retryTask={retryTask?.task_type === "search" ? retryTask : null}
+                      onRetryHandled={clearRetryRequest}
+                      stagedSources={stagedSources}
+                      addingResearch={addingResearch}
+                      onToggleResearchSource={handleToggleResearchSource}
+                      onAddResearchSources={handleAddResearchSources}
+                    />
+                  )}
+                  {workspaceTab === "research" && (
+                    <ResearchPanel
+                      caseId={selectedCase.id}
+                      archived={Boolean(selectedCase.archived_at)}
+                      activeSummaryId={activeSummaryId}
+                      onActiveSummaryChange={setActiveSummaryId}
+                      refreshToken={researchRefreshToken}
+                      retryTask={retryTask?.task_type === "summarize" ? retryTask : null}
                       onRetryHandled={clearRetryRequest}
                     />
                   )}

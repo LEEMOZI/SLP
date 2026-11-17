@@ -9,6 +9,7 @@ import type {
   SearchAttemptView,
   SearchCreate,
   SearchMode,
+  SourceReference,
   TaskDetail,
   TaskItem,
   TaskStatus,
@@ -92,9 +93,22 @@ interface SearchPanelProps {
   archived: boolean;
   retryTask: TaskItem | null;
   onRetryHandled: () => void;
+  stagedSources: SourceReference[];
+  addingResearch: boolean;
+  onToggleResearchSource: (source: SourceReference) => void;
+  onAddResearchSources: (sources: SourceReference[]) => void;
 }
 
-export default function SearchPanel({ caseId, archived, retryTask, onRetryHandled }: SearchPanelProps) {
+export default function SearchPanel({
+  caseId,
+  archived,
+  retryTask,
+  onRetryHandled,
+  stagedSources,
+  addingResearch,
+  onToggleResearchSource,
+  onAddResearchSources,
+}: SearchPanelProps) {
   const [form, setForm] = useState<SearchFormState>(emptyForm);
   const [versionOptions, setVersionOptions] = useState<VersionOption[]>([]);
   const [history, setHistory] = useState<TaskItem[]>([]);
@@ -350,7 +364,7 @@ export default function SearchPanel({ caseId, archived, retryTask, onRetryHandle
                 {taskDetail && !archived && ["failed", "partial", "cancelled", "recovery_pending"].includes(taskDetail.status) && <button className="button secondary" type="button" onClick={() => beginRetry(taskDetail)}>使用新参数重试</button>}
               </div>
               {taskDetail && <div className="attempt-status-line"><span className={`task-status ${taskDetail.status}`}>{statusLabels[taskDetail.status]}</span><span>{taskDetail.current_stage} · {taskDetail.progress_detail}</span></div>}
-              {loadingAttempt && !attempt ? <div className="empty-state compact">正在读取检索 Attempt…</div> : attempt ? <EvidencePanel attempt={attempt} /> : <div className="empty-state compact">执行记录尚未产生检索计划。</div>}
+              {loadingAttempt && !attempt ? <div className="empty-state compact">正在读取检索 Attempt…</div> : attempt ? <EvidencePanel attempt={attempt} archived={archived} stagedSources={stagedSources} adding={addingResearch} onToggleSource={onToggleResearchSource} onAddSources={onAddResearchSources} /> : <div className="empty-state compact">执行记录尚未产生检索计划。</div>}
             </>
           )}
         </div>

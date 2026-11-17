@@ -1,7 +1,7 @@
 import hmac
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -19,6 +19,12 @@ from .judgments import (
 )
 from .parser import MaterialParser, PARSER_VERSION, ParserLimits
 from .retrieval import search as retrieval_search
+from .summarizer import (
+    SummaryGenerationError,
+    SummaryGenerator,
+    SummaryRequest,
+    SummarySettings,
+)
 
 APP_VERSION = "1.0.0"
 
@@ -30,6 +36,7 @@ class AdapterSettings:
     parser_limits: ParserLimits
     token: str = ""
     judgment_deadline_s: float = 45.0
+    summary: SummarySettings = field(default_factory=SummarySettings.from_env)
 
     @classmethod
     def from_env(cls) -> "AdapterSettings":
@@ -94,6 +101,7 @@ def create_app(
     material_parser: Optional[MaterialParser] = None,
     retriever: Any = None,
     judgment_engine: Optional[JudgmentEngine] = None,
+    summary_generator: Optional[SummaryGenerator] = None,
 ) -> FastAPI:
     settings = settings or AdapterSettings.from_env()
     material_parser = material_parser or MaterialParser(
@@ -102,11 +110,13 @@ def create_app(
     judgment_engine = judgment_engine or JudgmentEngine(
         settings.judgment_db_dir, deadline_s=settings.judgment_deadline_s
     )
+    summary_generator = summary_generator or SummaryGenerator(settings.summary)
     app = FastAPI(title="SLP Capability Adapter", version=APP_VERSION)
     app.state.settings = settings
     app.state.material_parser = material_parser
     app.state.retriever = retriever
     app.state.judgment_engine = judgment_engine
+    app.state.summary_generator = summary_generator
 
     @app.middleware("http")
     async def internal_token_auth(request: Request, call_next):
@@ -148,6 +158,7 @@ def create_app(
                 "limits": settings.parser_limits.as_dict(),
             },
             "sources": sources,
+            "summary": summary_generator.capability(),
         }
 
     @app.post("/v1/parse")
@@ -235,6 +246,22 @@ def create_app(
                 status_code=503,
                 detail={"code": "source_unavailable", "message": "来源暂不可用"},
             ) from error
+
+    @app.post("/v1/summaries")
+    async def generate_summary(payload: SummaryRequest):
+        try:
+            return await summary_generator.generate(payload)
+        except SummaryGenerationError as error:
+            return JSONResponse(
+                status_code=error.status_code,
+                content={
+                    "detail": {
+                        "code": error.code,
+                        "message": error.message,
+                        "provider": payload.provider,
+                    }
+                },
+            )
 
     return app
 

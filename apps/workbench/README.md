@@ -1,6 +1,6 @@
 # SLP 法律工作台（独立 Web 实例）
 
-基于 FastAPI、React 与 SQLite 的独立工作台，不修改或接管既有 SLP MCP 服务。当前包含 FR-01 服务就绪检查、FR-02 案件管理、FR-03 材料上传与解析、FR-04 统一法规与类案检索、FR-05 统一任务中心。
+基于 FastAPI、React 与 SQLite 的独立工作台，不修改或接管既有 SLP MCP 服务。当前包含 FR-01 服务就绪检查、FR-02 案件管理、FR-03 材料上传与解析、FR-04 统一法规与类案检索、FR-05 统一任务中心、FR-06 证据查看与研究摘要。
 
 ## 本地运行
 
@@ -61,6 +61,35 @@ P0 默认上限经隔离基准冻结，可用同名环境变量显式调整，�
 
 检索模式为 `auto`、`law`、`cases`。自动模式使用规则路由；类案以裁判文书为主、指导案例为补充，业务参考只在明确指引或学习意图时触发。材料版本仅用于规则提取法名和争议词，不建立材料向量库，也不虚构法院、年份或案由过滤条件。响应保留实际提交的检索词、AND 到 OR 等降级记录、命中原因、部分匹配及来源覆盖。单源失败不影响其他来源证据；零命中成功、部分来源失败和全来源失败具有不同任务状态。
 
+## 研究摘要
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/cases/{case_id}/summaries` | 创建空白摘要或带初始来源的摘要 |
+| GET | `/api/cases/{case_id}/summaries` | 当前案件摘要列表 |
+| GET | `/api/summaries/{summary_id}` | 当前来源、全部版本、引用问题和覆盖信息 |
+| PUT | `/api/summaries/{summary_id}/sources` | 显式添加来源或按句柄移除来源 |
+| POST | `/api/summaries/{summary_id}/versions` | 保存人工版本，可空正文保存为草稿 |
+| POST | `/api/summaries/{summary_id}/generate` | 创建异步摘要任务；支持 `Idempotency-Key` |
+| POST | `/api/summaries/{summary_id}/confirm` | 校验并确认当前版本 |
+
+证据和材料段落可跨同一案件的不同 Search Attempt 显式组合，新 Attempt 不会自动加入既有摘要。来源按加入顺序获得稳定句柄 `S1`、`S2`，正文引用格式为 `[[S1]]`；跨案件、未知或失效来源会被拒绝。移除仍被历史版本引用的来源时，API 返回 `source_removal_requires_confirmation` 409 和受影响版本；确认移除后，历史版本仍保留不可变来源快照供核验，但引用已移除来源的当前版本不能确认。
+
+版本状态为 `draft`、`edited`、`confirmed`。保存编辑和成功生成都会追加版本，不覆盖历史正文；生成失败、取消或重启后的未知结果不会追加版本。空白正文可以保存为草稿，但空正文、未知引用、跨案件引用、失效引用或未加入当前选择的引用会阻止确认。归档案件可读取摘要和原文，不能修改来源、保存、生成或确认。
+
+默认生成器为 `builtin-extractive`，只摘录已冻结的真实来源，不调用 LM Studio 或其他模型，`actual_model` 为 `null`，结果明确标注“未使用模型，不构成法律结论”。真实 OpenAI-compatible 模型只能由 sidecar 通过独立环境配置显式启用：
+
+```bash
+SLP_SUMMARY_PROVIDER=openai-compatible \
+SLP_SUMMARY_OPENAI_BASE_URL=https://model.example.com/v1 \
+SLP_SUMMARY_OPENAI_MODEL=your-model \
+SLP_SUMMARY_OPENAI_API_KEY=your-key \
+SLP_SUMMARY_OPENAI_TIMEOUT_S=180 \
+.venv/bin/python -m uvicorn apps.capability_adapter.app:app --host 127.0.0.1 --port 8790
+```
+
+三个 OpenAI 连接配置必须完整；请求失败、响应无效或引用伪造都会使任务失败，不会静默降级为规则摘录。生成结果记录请求生成器、实际生成器、实际模型、任务和 Attempt。当前范围不包含 FR-07 Markdown/DOCX 导出。
+
 ## 任务 API
 
 | 方法 | 路径 | 说明 |
@@ -72,7 +101,7 @@ P0 默认上限经隔离基准冻结，可用同名环境变量显式调整，�
 
 任务状态为 `queued`、`running`、`completed`、`partial`、`failed`、`cancelled`、`recovery_pending`。`progress` 为可空整数；只有执行器能真实计算进度时才返回 0–100，否则为 `null`。
 
-取消只设置执行请求的协作标记，不承诺底层计算或远端 OCR 立即停止。执行器在检查点确认取消；若此前已保存部分结果，则保留结果并标记 `partial`，否则标记 `cancelled`。材料段和分来源证据先通过 `report_partial()` 落库，再检查取消。重试不会删除旧结果或错误，而是在 `task_attempts` 中追加记录；材料同时追加解析版本，检索证据按 attempt 隔离。
+取消只设置执行请求的协作标记，不承诺底层计算或远端 OCR 立即停止。执行器在检查点确认取消；若此前已保存部分结果，则保留结果并标记 `partial`，否则标记 `cancelled`。材料段和分来源证据先通过 `report_partial()` 落库，再检查取消。重试不会删除旧结果或错误，而是在 `task_attempts` 中追加记录；材料同时追加解析版本，检索证据按 attempt 隔离。`summarize` 重试只接受空请求体 `{}`，始终复用首次执行冻结的问题、来源全文、基线和生成器，不允许通过 `scope` 修改范围。
 
 服务启动时，将上次遗留的 `queued`、`running` 任务及其当前执行记录标记为 `recovery_pending`，不会伪造成功；运行中的材料版本也进入待恢复状态并保留已有文本。用户可基于输入快照创建新执行。页面关闭不影响服务端任务记录。
 
@@ -131,6 +160,6 @@ SLP_WORKBENCH_ENABLE_TASK_DEMO=1 \
 cd apps/workbench/frontend && npm run build
 ```
 
-工作台测试使用临时 SQLite 数据库和 fake gateway，sidecar 测试使用临时材料目录及裁判文书 FTS 数据库，不读写正式工作台数据。测试覆盖任务终态、幂等、无百分比语义、协作取消、重试历史、归档和案件隔离、原件与真实定位、重复材料、部分解析、来源路由、零命中、单源失败、证据隔离、原文缓存和服务重启恢复。
+工作台测试使用临时 SQLite 数据库和 fake gateway，sidecar 测试使用临时材料目录及裁判文书 FTS 数据库，不读写正式工作台数据。测试覆盖任务终态、幂等、无百分比语义、协作取消、重试历史、归档和案件隔离、原件与真实定位、重复材料、部分解析、来源路由、零命中、单源失败、证据隔离、原文缓存、服务重启恢复、v3→v4 迁移、摘要版本与引用校验，以及真实模型失败不降级。
 
-浏览器验收应使用独立 `/tmp` 数据目录和独立端口，覆盖上传 boundary、重复确认、解析版本与段落定位、三种检索模式、材料版本与过滤器、实际检索词、来源部分失败、旧 Attempt、证据原文、归档只读及窄屏布局。真实 OCR 验收还应记录进程 RSS。Chroma `PersistentClient` 启动会进入 SQLite 事务与迁移管理，不能视为严格只读；真实数据并发验收应使用 APFS copy-on-write 克隆等隔离副本，并核对原始库文件大小和修改时间未变化。不得连接 LM Studio 或修改、重启生产 8765、8766、8767 服务。
+浏览器验收应使用独立 `/tmp` 数据目录和独立端口，覆盖上传 boundary、重复确认、解析版本与段落定位、三种检索模式、材料版本与过滤器、实际检索词、来源部分失败、旧 Attempt、证据原文、跨 Attempt 研究选择、摘要编辑与确认、生成失败重试、归档只读、刷新恢复及窄屏布局。真实 OCR 验收还应记录进程 RSS。Chroma `PersistentClient` 启动会进入 SQLite 事务与迁移管理，不能视为严格只读；真实数据并发验收应使用 APFS copy-on-write 克隆等隔离副本，并核对原始库文件大小和修改时间未变化。不得连接 LM Studio 或修改、重启生产 8765、8766、8767 服务。
