@@ -402,6 +402,75 @@ export interface DeliveryList {
   total: number;
 }
 
+export interface RiskItem {
+  level: "高危" | "中等" | "提示";
+  excerpt: string;
+  risk_issue: string;
+  suggestion: string;
+  legal_basis: string;
+}
+
+export interface LawSource extends SummarySource {
+  law_name?: string;
+  article?: number | null;
+  law_type?: string;
+}
+
+export interface ContractReviewVersion {
+  id: string;
+  review_id: string;
+  version_number: number;
+  status: "draft" | "edited" | "confirmed";
+  body: string;
+  risks: RiskItem[];
+  citations: Record<string, LawSource>;
+  base_version_id: string | null;
+  task_id: string | null;
+  attempt_id: string | null;
+  generator_provider: string | null;
+  requested_provider: string | null;
+  actual_model: string | null;
+  coverage: Record<string, unknown>;
+  saved_at: string;
+  confirmed_at: string | null;
+}
+
+export interface ContractReview {
+  id: string;
+  case_id: string;
+  material_id: string;
+  title: string;
+  contract_type: string;
+  focus_points: string;
+  current_version_id: string | null;
+  current_version_number: number | null;
+  current_sources: LawSource[];
+  latest_task_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractReviewList {
+  items: ContractReview[];
+  total: number;
+}
+
+export interface ContractReviewDetail {
+  review: ContractReview;
+  sources: LawSource[];
+  current_version: ContractReviewVersion | null;
+  versions: ContractReviewVersion[];
+  coverage: Record<string, unknown>;
+  issues: CitationIssue[];
+}
+
+export interface ContractReviewCreate {
+  material_id: string;
+  title: string;
+  contract_type: string;
+  focus_points: string;
+}
+
 export interface SummaryCreate {
   title: string;
   question: string;

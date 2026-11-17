@@ -1,12 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import ContractReviewPanel from "./ContractReviewPanel";
 import MaterialsPanel from "./MaterialsPanel";
 import ResearchPanel from "./ResearchPanel";
 import SearchPanel from "./SearchPanel";
 import TaskCenter from "./TaskCenter";
 import type { CaseItem, ReadinessReport, SourceReference, TaskItem } from "./types";
 
-type WorkspaceTab = "materials" | "search" | "research" | "tasks";
+type WorkspaceTab = "materials" | "search" | "research" | "contract" | "tasks";
 
 function formatDate(value: string | null) {
   if (!value) return "尚未打开";
@@ -318,6 +319,7 @@ export default function App() {
                   <button type="button" role="tab" aria-selected={workspaceTab === "materials"} className={workspaceTab === "materials" ? "active" : ""} onClick={() => { setWorkspaceTab("materials"); setRetryTask(null); }}>材料</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "search"} className={workspaceTab === "search" ? "active" : ""} onClick={() => { setWorkspaceTab("search"); setRetryTask(null); }}>检索</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "research"} className={workspaceTab === "research" ? "active" : ""} onClick={() => { setWorkspaceTab("research"); setRetryTask(null); }}>研究</button>
+                  <button type="button" role="tab" aria-selected={workspaceTab === "contract"} className={workspaceTab === "contract" ? "active" : ""} onClick={() => { setWorkspaceTab("contract"); setRetryTask(null); }}>合同审查</button>
                   <button type="button" role="tab" aria-selected={workspaceTab === "tasks"} className={workspaceTab === "tasks" ? "active" : ""} onClick={() => { setWorkspaceTab("tasks"); setRetryTask(null); }}>任务</button>
                 </div>
                 <div className="workspace-tab-content" role="tabpanel">
@@ -352,6 +354,13 @@ export default function App() {
                       refreshToken={researchRefreshToken}
                       retryTask={retryTask?.task_type === "summarize" ? retryTask : null}
                       onRetryHandled={clearRetryRequest}
+                    />
+                  )}
+                  {workspaceTab === "contract" && (
+                    <ContractReviewPanel
+                      caseId={selectedCase.id}
+                      archived={Boolean(selectedCase.archived_at)}
+                      refreshToken={researchRefreshToken}
                     />
                   )}
                   {workspaceTab === "tasks" && <TaskCenter cases={cases} caseId={selectedCase.id} onRetryTask={handleRetryTask} />}

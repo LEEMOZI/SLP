@@ -8,6 +8,7 @@ MIGRATION_VERSIONS = {
     3: "evidence_items_and_documents",
     4: "research_summaries",
     5: "delivery_versions",
+    6: "contract_reviews",
 }
 
 
@@ -238,4 +239,50 @@ def run_migrations(connection: sqlite3.Connection) -> None:
         connection.execute(
             "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
             (5, MIGRATION_VERSIONS[5]),
+        )
+
+    if 6 not in applied:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS contract_reviews (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES cases(id),
+                material_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                contract_type TEXT NOT NULL DEFAULT '',
+                focus_points TEXT NOT NULL DEFAULT '',
+                current_version_id TEXT REFERENCES contract_review_versions(id),
+                current_version_number INTEGER,
+                current_sources TEXT NOT NULL DEFAULT '[]',
+                latest_task_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_reviews_case
+            ON contract_reviews(case_id, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS contract_review_versions (
+                id TEXT PRIMARY KEY,
+                review_id TEXT NOT NULL REFERENCES contract_reviews(id),
+                version_number INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                risks TEXT NOT NULL DEFAULT '[]',
+                citations TEXT NOT NULL DEFAULT '{}',
+                base_version_id TEXT REFERENCES contract_review_versions(id),
+                task_id TEXT,
+                attempt_id TEXT,
+                generator_provider TEXT,
+                requested_provider TEXT,
+                actual_model TEXT,
+                coverage TEXT NOT NULL DEFAULT '{}',
+                saved_at TEXT NOT NULL,
+                confirmed_at TEXT
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_review_versions_unique
+            ON contract_review_versions(review_id, version_number);
+            """
+        )
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (6, MIGRATION_VERSIONS[6]),
         )

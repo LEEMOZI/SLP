@@ -106,5 +106,26 @@ class CapabilityGateway:
         except (httpx.HTTPError, ValueError) as error:
             raise CapabilityError("裁判文书原文暂不可用") from error
 
+    async def generate_review(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            response = await self.client.post("/v1/reviews", json=payload)
+            if response.status_code != 200:
+                message = "合同审查服务请求失败"
+                try:
+                    detail = response.json().get("detail")
+                    if isinstance(detail, dict) and isinstance(detail.get("message"), str):
+                        message = detail["message"]
+                except (ValueError, AttributeError):
+                    pass
+                raise CapabilityError(message)
+            result = response.json()
+            if not isinstance(result, dict):
+                raise CapabilityError("合同审查服务返回了无效结果")
+            return result
+        except CapabilityError:
+            raise
+        except (httpx.HTTPError, ValueError) as error:
+            raise CapabilityError("合同审查服务暂不可用") from error
+
     async def close(self) -> None:
         await self.client.aclose()

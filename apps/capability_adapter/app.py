@@ -19,6 +19,11 @@ from .judgments import (
 )
 from .parser import MaterialParser, PARSER_VERSION, ParserLimits
 from .retrieval import search as retrieval_search
+from .review_generator import (
+    ReviewGenerationError,
+    ReviewGenerator,
+    ReviewRequest,
+)
 from .summarizer import (
     SummaryGenerationError,
     SummaryGenerator,
@@ -102,6 +107,7 @@ def create_app(
     retriever: Any = None,
     judgment_engine: Optional[JudgmentEngine] = None,
     summary_generator: Optional[SummaryGenerator] = None,
+    review_generator: Optional[ReviewGenerator] = None,
 ) -> FastAPI:
     settings = settings or AdapterSettings.from_env()
     material_parser = material_parser or MaterialParser(
@@ -111,12 +117,16 @@ def create_app(
         settings.judgment_db_dir, deadline_s=settings.judgment_deadline_s
     )
     summary_generator = summary_generator or SummaryGenerator(settings.summary)
+    review_generator = review_generator or ReviewGenerator(
+        settings=settings.summary, retriever=retriever
+    )
     app = FastAPI(title="SLP Capability Adapter", version=APP_VERSION)
     app.state.settings = settings
     app.state.material_parser = material_parser
     app.state.retriever = retriever
     app.state.judgment_engine = judgment_engine
     app.state.summary_generator = summary_generator
+    app.state.review_generator = review_generator
 
     @app.middleware("http")
     async def internal_token_auth(request: Request, call_next):
@@ -159,6 +169,7 @@ def create_app(
             },
             "sources": sources,
             "summary": summary_generator.capability(),
+            "review": review_generator.capability(),
         }
 
     @app.post("/v1/parse")
@@ -259,6 +270,21 @@ def create_app(
                         "code": error.code,
                         "message": error.message,
                         "provider": payload.provider,
+                    }
+                },
+            )
+
+    @app.post("/v1/reviews")
+    async def generate_review(payload: ReviewRequest):
+        try:
+            return review_generator.generate(payload)
+        except ReviewGenerationError as error:
+            return JSONResponse(
+                status_code=error.status_code,
+                content={
+                    "detail": {
+                        "code": error.code,
+                        "message": error.message,
                     }
                 },
             )

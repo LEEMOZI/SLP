@@ -69,6 +69,20 @@ from .summaries import (
     SummaryValidationError,
     SummaryVersionCreate,
 )
+from .contract_reviews import (
+    ContractReviewConfirmationError,
+    ContractReviewCreate,
+    ContractReviewDetail,
+    ContractReviewList,
+    ContractReviewNotFoundError,
+    ContractReviewRepository,
+    ContractReviewSourcesUpdate,
+    ContractReviewValidationError,
+    ContractReviewVersionCreate,
+    LawSource,
+    ReviewHandler,
+    validate_version as validate_review_version,
+)
 from .task_demo import DemoTaskCreate, register_demo_handler
 from .task_service import TaskService
 from .tasks import (
@@ -127,6 +141,13 @@ def create_app(
         capability_gateway,
     )
     task_service.register_handler("summarize", summary_handler)
+    contract_review_repository = ContractReviewRepository(repository)
+    review_handler = ReviewHandler(
+        contract_review_repository,
+        task_service.repository,
+        capability_gateway,
+    )
+    task_service.register_handler("review", review_handler)
     delivery_repository = DeliveryRepository(repository)
     delivery_storage = DeliveryStorage(data_dir)
     if enable_task_demo:
@@ -193,6 +214,32 @@ def create_app(
             ) from error
         if isinstance(error, SummaryValidationError):
             raise HTTPException(status_code=422, detail=str(error)) from error
+        raise_task_error(error)
+
+    def raise_review_error(error):
+        if isinstance(error, ContractReviewNotFoundError):
+            raise HTTPException(status_code=404, detail="合同审查不存在") from error
+        if isinstance(error, TaskCaseNotFoundError):
+            raise HTTPException(status_code=404, detail="案件不存在") from error
+        if isinstance(error, CaseArchivedError):
+            raise HTTPException(status_code=409, detail="案件已归档，合同审查为只读") from error
+        if isinstance(error, ContractReviewConfirmationError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "contract_review_validation_failed",
+                    "message": "合同审查仍存在引用或内容问题",
+                    "issues": [item.model_dump() for item in error.issues],
+                },
+            ) from error
+        if isinstance(error, ContractReviewValidationError):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "contract_review_validation_failed",
+                    "message": str(error),
+                },
+            ) from error
         raise_task_error(error)
 
     @app.get("/api/readiness", response_model=ReadinessReport)
@@ -470,6 +517,110 @@ def create_app(
             SummaryConfirmationError,
         ) as error:
             raise_summary_error(error)
+
+    @app.post(
+        "/api/cases/{case_id}/reviews",
+        response_model=ContractReviewDetail,
+        status_code=201,
+    )
+    def create_review(case_id: str, payload: ContractReviewCreate):
+        try:
+            contract_review_repository.require_case(case_id, writable=True)
+            review = contract_review_repository.create(
+                case_id,
+                payload.material_id,
+                title=payload.title,
+                contract_type=payload.contract_type,
+                focus_points=payload.focus_points,
+            )
+            return contract_review_repository.detail(review.id)
+        except (
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            ContractReviewValidationError,
+        ) as error:
+            raise_review_error(error)
+
+    @app.get(
+        "/api/cases/{case_id}/reviews", response_model=ContractReviewList
+    )
+    def list_reviews(case_id: str):
+        try:
+            contract_review_repository.require_case(case_id)
+        except TaskCaseNotFoundError as error:
+            raise_review_error(error)
+        items = contract_review_repository.list(case_id)
+        return ContractReviewList(items=items, total=len(items))
+
+    @app.get(
+        "/api/reviews/{review_id}", response_model=ContractReviewDetail
+    )
+    def get_review(review_id: str):
+        try:
+            return contract_review_repository.detail(review_id)
+        except ContractReviewNotFoundError as error:
+            raise_review_error(error)
+
+    @app.post(
+        "/api/reviews/{review_id}/versions",
+        response_model=ContractReviewDetail,
+        status_code=201,
+    )
+    def save_review_version(review_id: str, payload: ContractReviewVersionCreate):
+        try:
+            contract_review_repository.require_case(
+                contract_review_repository.get(review_id).case_id, writable=True
+            )
+            version = contract_review_repository.save_manual_version(
+                review_id,
+                body=payload.body,
+                base_version_id=payload.base_version_id,
+            )
+            return contract_review_repository.detail(review_id)
+        except ContractReviewNotFoundError as error:
+            raise_review_error(error)
+        except (TaskCaseNotFoundError, CaseArchivedError) as error:
+            raise_review_error(error)
+
+    @app.post("/api/reviews/{review_id}/confirm", response_model=ContractReviewDetail)
+    def confirm_review(review_id: str):
+        try:
+            review = contract_review_repository.get(review_id)
+            contract_review_repository.require_case(review.case_id, writable=True)
+            return contract_review_repository.confirm(review_id)
+        except (
+            ContractReviewNotFoundError,
+            CaseArchivedError,
+            ContractReviewConfirmationError,
+        ) as error:
+            raise_review_error(error)
+
+    @app.post(
+        "/api/reviews/{review_id}/generate", response_model=Task, status_code=201
+    )
+    async def generate_review(review_id: str, client_request_id: Optional[str] = Header(default=None)):
+        try:
+            review = contract_review_repository.get(review_id)
+            contract_review_repository.require_case(review.case_id, writable=True)
+            snapshot = review_handler.prepare(review_id)
+            task = await task_service.create_task(
+                case_id=review.case_id,
+                task_type="review",
+                title=f"合同审查：{review.title}",
+                input_snapshot=snapshot,
+                model_role="contract_review",
+                client_request_id=client_request_id,
+            )
+            return task
+        except (
+            ContractReviewNotFoundError,
+            TaskCaseNotFoundError,
+            CaseArchivedError,
+            ContractReviewValidationError,
+            TaskStateError,
+            TaskIdempotencyConflictError,
+        ) as error:
+            raise_review_error(error)
 
     @app.post(
         "/api/summaries/{summary_id}/exports",

@@ -15,13 +15,13 @@ SUMMARY_PROVIDERS = ("builtin-extractive", "openai-compatible")
 
 
 class SourceReference(BaseModel):
-    kind: Literal["evidence", "material_segment"]
+    kind: Literal["evidence", "material_segment", "law"]
     id: str = Field(min_length=1, max_length=128)
 
 
 class SummarySource(BaseModel):
     handle: str
-    kind: Literal["evidence", "material_segment"]
+    kind: Literal["evidence", "material_segment", "law"]
     source_id: str
     case_id: str
     title: str

@@ -3,6 +3,9 @@ import type {
   Capabilities,
   CaseItem,
   CaseList,
+  ContractReviewCreate,
+  ContractReviewDetail,
+  ContractReviewList,
   DeliveryList,
   DeliveryVersion,
   DemoOutcome,
@@ -151,6 +154,24 @@ export const api = {
       body: JSON.stringify({ format, keep_issues: keepIssues }),
     }),
   listDeliveries: (caseId: string) => request<DeliveryList>(`/api/cases/${caseId}/deliveries`),
+  listReviews: (caseId: string) => request<ContractReviewList>(`/api/cases/${caseId}/reviews`),
+  createReview: (caseId: string, materialId: string, title: string, contractType: string, focusPoints: string) =>
+    request<ContractReviewDetail>(`/api/cases/${caseId}/reviews`, {
+      method: "POST",
+      body: JSON.stringify({ material_id: materialId, title, contract_type: contractType, focus_points: focusPoints }),
+    }),
+  getReview: (reviewId: string) => request<ContractReviewDetail>(`/api/reviews/${reviewId}`),
+  saveReviewVersion: (reviewId: string, body: string, baseVersionId?: string) =>
+    request<ContractReviewDetail>(`/api/reviews/${reviewId}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ body, base_version_id: baseVersionId ?? null }),
+    }),
+  confirmReview: (reviewId: string) => request<ContractReviewDetail>(`/api/reviews/${reviewId}/confirm`, { method: "POST" }),
+  generateReview: (reviewId: string, clientRequestId?: string) =>
+    request<TaskDetail>(`/api/reviews/${reviewId}/generate`, {
+      method: "POST",
+      headers: clientRequestId ? { "Idempotency-Key": clientRequestId } : undefined,
+    }),
   listTasks: (caseId?: string) =>
     request<TaskList>(`/api/tasks${caseId ? `?case_id=${encodeURIComponent(caseId)}` : ""}`),
   getTask: (taskId: string) => request<TaskDetail>(`/api/tasks/${taskId}`),
