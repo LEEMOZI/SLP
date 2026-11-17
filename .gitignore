@@ -1,5 +1,6 @@
 # ===== Python =====
 venv/
+.venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -27,6 +28,7 @@ MCP/session-storage/logs/
 
 # ===== Node =====
 node_modules/
+apps/workbench/frontend/dist/
 
 # ===== macOS =====
 .DS_Store
