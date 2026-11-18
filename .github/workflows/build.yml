@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -157,10 +160,15 @@ jobs:
           DMG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg)
           TARBALL=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz)
           SIG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig)
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
-            --notes "一键安装、自动更新的法律工作台桌面应用。下载 .dmg 安装，应用支持自动更新。" \
-            --draft \
-            "$DMG" "$TARBALL" "$SIG"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release exists, uploading assets"
+            gh release upload "${GITHUB_REF_NAME}" "$DMG" "$TARBALL" "$SIG" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
+              --notes "一键安装、自动更新的法律工作台桌面应用。下载 .dmg 安装，应用支持自动更新。" \
+              --draft \
+              "$DMG" "$TARBALL" "$SIG"
+          fi
 
 
