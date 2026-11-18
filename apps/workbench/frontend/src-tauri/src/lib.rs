@@ -108,7 +108,7 @@ fn wait_port_ready(addr: &str, timeout: Duration) -> bool {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -204,16 +204,17 @@ pub fn run() {
                 let _ = window.hide();
             }
         })
-        .on_run_event(|app_handle, event| {
-            if let RunEvent::Exit = event {
-                if let Some(state) = app_handle.try_state::<Services>() {
-                    for mut child in state.0.lock().unwrap().drain(..) {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                    }
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if let RunEvent::Exit = event {
+            if let Some(state) = app_handle.try_state::<Services>() {
+                for mut child in state.0.lock().unwrap().drain(..) {
+                    let _ = child.kill();
+                    let _ = child.wait();
                 }
             }
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        }
+    });
 }
