@@ -138,14 +138,22 @@ pub fn run() {
             };
             *app.state::<Services>().0.lock().unwrap() = services;
 
-            // 独立线程等待后端就绪后显示窗口
+            // 独立线程等待后端就绪：重新加载页面后再显示窗口
+            // （webview 创建即开始导航，此时后端往往未就绪，首次加载会失败且不会自动重试）
             std::thread::spawn(move || {
-                let ready = wait_backend_ready(Duration::from_secs(30));
+                let ready = wait_backend_ready(Duration::from_secs(60));
                 if let Some(window) = app_handle.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    if !ready {
-                        eprintln!("[SLP] Backend not ready after 30s, showing window anyway");
+                    if ready {
+                        // 端口就绪后稍作停顿，等 uvicorn 完成初始化，再重新导航
+                        std::thread::sleep(Duration::from_millis(500));
+                        let _ = window.eval("location.reload()");
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    } else {
+                        eprintln!("[SLP] Backend not ready after 60s, showing window anyway");
+                        let _ = window.eval("location.reload()");
+                        let _ = window.show();
+                        let _ = window.set_focus();
                     }
                 }
             });
