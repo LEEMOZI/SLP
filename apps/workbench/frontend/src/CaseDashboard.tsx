@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CaseDashboardData } from "./types";
+import type { CaseDashboardData, RecentTask } from "./types";
 import { api } from "./api";
 
 interface Props {
@@ -70,6 +70,38 @@ export default function CaseDashboard({ caseId, refreshToken }: Props) {
           <span className="task-total">共 {stats.tasks_total} 个任务</span>
         </div>
       </div>
+
+      {Object.keys(data.task_types).length > 0 && (
+        <div className="dashboard-task-types">
+          <h4>任务类型分布</h4>
+          <div className="task-type-bar">
+            {Object.entries(data.task_types).map(([type, count]) => (
+              <div
+                key={type}
+                className={`task-type-segment type-${type}`}
+                style={{ flex: count }}
+                title={`${type}: ${count}`}
+              />
+            ))}
+          </div>
+          <div className="task-type-legend">
+            {Object.entries(data.task_types).map(([type, count]) => (
+              <span key={type}><i className={`dot type-${type}`} /> {type} {count}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.recent_tasks.length > 0 && (
+        <div className="dashboard-recent">
+          <h4>最近活动</h4>
+          <ul className="recent-timeline">
+            {data.recent_tasks.map((task) => (
+              <RecentTaskItem key={task.id} task={task} />
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
@@ -84,5 +116,28 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         {sub && <span className="stat-sub">{sub}</span>}
       </div>
     </div>
+  );
+}
+
+const STATUS_ICONS: Record<string, string> = {
+  completed: "✓",
+  running: "▶",
+  queued: "⏳",
+  failed: "✗",
+  partial: "◐",
+  cancelled: "⊘",
+};
+
+function RecentTaskItem({ task }: { task: RecentTask }) {
+  const icon = STATUS_ICONS[task.status] || "•";
+  const time = new Date(task.updated_at).toLocaleString("zh-CN", {
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+  return (
+    <li className={`recent-item status-${task.status}`}>
+      <span className="recent-status-icon" aria-hidden>{icon}</span>
+      <span className="recent-title">{task.title}</span>
+      <span className="recent-time">{time}</span>
+    </li>
   );
 }

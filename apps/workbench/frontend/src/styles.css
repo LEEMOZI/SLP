@@ -584,3 +584,79 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .task-status-legend .dot.running { background: #e8a838; }
 .task-status-legend .dot.failed { background: var(--danger); }
 .task-total { margin-left: auto; }
+
+/* Task type distribution */
+.dashboard-task-types { margin-top: 16px; }
+.dashboard-task-types h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.task-type-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--line);
+}
+.task-type-segment { height: 100%; transition: flex .3s; }
+.task-type-segment.type-parse { background: #5b9bd5; }
+.task-type-segment.type-search { background: #70ad47; }
+.task-type-segment.type-summarize { background: #ffc000; }
+.task-type-segment.type-review { background: #ed7d31; }
+.task-type-segment.type-litigation { background: #a5a5a5; }
+.task-type-segment.type-export { background: #4472c4; }
+.task-type-segment.type-deliver { background: #9b59b6; }
+.task-type-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.task-type-legend .dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.task-type-legend .dot.type-parse { background: #5b9bd5; }
+.task-type-legend .dot.type-search { background: #70ad47; }
+.task-type-legend .dot.type-summarize { background: #ffc000; }
+.task-type-legend .dot.type-review { background: #ed7d31; }
+.task-type-legend .dot.type-litigation { background: #a5a5a5; }
+.task-type-legend .dot.type-export { background: #4472c4; }
+.task-type-legend .dot.type-deliver { background: #9b59b6; }
+
+/* Recent activity timeline */
+.dashboard-recent { margin-top: 16px; }
+.dashboard-recent h4 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.recent-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.recent-status-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.recent-item.status-completed .recent-status-icon { color: var(--accent); }
+.recent-item.status-running .recent-status-icon { color: #e8a838; }
+.recent-item.status-queued .recent-status-icon { color: var(--muted); }
+.recent-item.status-failed .recent-status-icon { color: var(--danger); }
+.recent-item.status-partial .recent-status-icon { color: #e8a838; }
+.recent-item.status-cancelled .recent-status-icon { color: var(--muted); }
+.recent-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-time { font-size: 11px; color: var(--muted); flex-shrink: 0; }

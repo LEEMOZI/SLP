@@ -225,4 +225,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ case_id: caseId, outcome, delay_ms: 50 }),
     }),
+  streamTask: (taskId: string, onEvent: (task: TaskDetail) => void, onDone: () => void) => {
+    const es = new EventSource(`/api/tasks/${taskId}/stream`);
+    es.onmessage = (e) => {
+      const task = JSON.parse(e.data) as TaskDetail;
+      onEvent(task);
+      if (["completed", "partial", "failed", "cancelled"].includes(task.status)) {
+        es.close();
+        onDone();
+      }
+    };
+    es.onerror = () => {
+      es.close();
+      onDone();
+    };
+    return () => es.close();
+  },
 };

@@ -280,7 +280,7 @@ class ReviewGenerator:
         )
 
         try:
-            report = self._call_llm(prompt, max_tokens=8000)
+            report = self._call_llm(prompt, max_tokens=8000, quality=payload.quality)
         except ReviewGenerationError:
             raise
         except Exception as exc:
@@ -323,14 +323,14 @@ class ReviewGenerator:
             "evidence_pack": evidence_pack,
         }
 
-    def _call_llm(self, prompt: str, *, max_tokens: int = 4000) -> str:
+    def _call_llm(self, prompt: str, *, max_tokens: int = 4000, quality: bool = False) -> str:
         """直接用 httpx 调 OpenAI-compatible /chat/completions；从 summarizer._openai_compatible 复用。"""
         try:
             response = httpx.post(
                 f"{self.settings.openai_base_url.rstrip('/')}/chat/completions",
                 headers={"Authorization": f"Bearer {self.settings.openai_api_key}"},
                 json={
-                    "model": self.settings.openai_model,
+                    "model": self.settings.model_for(quality),
                     "messages": [
                         {"role": "system", "content": "你是一名资深中国执业律师，专长合同审查。"},
                         {"role": "user", "content": prompt},

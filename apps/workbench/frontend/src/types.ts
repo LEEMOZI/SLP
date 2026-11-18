@@ -28,9 +28,19 @@ export interface CaseDashboardStats {
   deliveries: number;
 }
 
+export interface RecentTask {
+  id: string;
+  title: string;
+  status: string;
+  task_type: string;
+  updated_at: string;
+}
+
 export interface CaseDashboardData {
   case: CaseItem;
   stats: CaseDashboardStats;
+  task_types: Record<string, number>;
+  recent_tasks: RecentTask[];
 }
 
 export interface ServiceHealth {

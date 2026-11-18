@@ -108,16 +108,17 @@ export default function LitigationDraftingPanel({ caseId, archived, refreshToken
     setError("");
     try {
       const task = await api.generateLitigation(detail.document.id, `litigation-${detail.document.id}`);
-      for (let i = 0; i < 100; i++) {
-        const current = await api.getTask(task.id);
-        if (current.status === "completed") break;
-        if (current.status === "failed") {
-          setError(`文书生成失败：${current.progress_detail || "未知错误"}`);
-          setAction(null);
-          return;
-        }
-        await new Promise((r) => setTimeout(r, 300));
-      }
+      await new Promise<void>((resolve) => {
+        api.streamTask(
+          task.id,
+          (current) => {
+            if (current.status === "failed") {
+              setError(`文书生成失败：${current.progress_detail || "未知错误"}`);
+            }
+          },
+          () => resolve(),
+        );
+      });
       setDetail(await api.getLitigationDoc(detail.document.id));
       setNotice("诉讼文书已生成 — 请复核法条引用与文书结构，确认后形成不可变版本");
     } catch (cause) {

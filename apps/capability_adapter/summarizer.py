@@ -46,13 +46,22 @@ class SummaryGenerationError(Exception):
         self.status_code = status_code
 
 
+# LM Studio 代理默认值（Mac Studio 本地部署）
+_DEFAULT_BASE_URL = "http://127.0.0.1:1235/v1"
+_DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b"
+_DEFAULT_QUALITY_MODEL = "qwen/qwen3.8-27b"
+_DEFAULT_API_KEY = "lm-studio"
+
+
 @dataclass(frozen=True)
 class SummarySettings:
-    provider: str = "builtin-extractive"
-    openai_base_url: str = ""
-    openai_model: str = ""
-    openai_api_key: str = ""
+    provider: str = "openai-compatible"
+    openai_base_url: str = _DEFAULT_BASE_URL
+    openai_model: str = _DEFAULT_MODEL
+    openai_api_key: str = _DEFAULT_API_KEY
+    quality_model: str = _DEFAULT_QUALITY_MODEL
     timeout_s: float = 180.0
+    fallback_to_extractive: bool = True
 
     @classmethod
     def from_env(cls) -> "SummarySettings":
@@ -60,17 +69,26 @@ class SummarySettings:
             timeout = float(os.getenv("SLP_SUMMARY_OPENAI_TIMEOUT_S", "180"))
         except ValueError:
             timeout = 180.0
+        fallback = os.getenv("SLP_SUMMARY_FALLBACK_TO_EXTRACTIVE", "true").strip().lower()
         return cls(
-            provider=os.getenv("SLP_SUMMARY_PROVIDER", "builtin-extractive").strip(),
-            openai_base_url=os.getenv("SLP_SUMMARY_OPENAI_BASE_URL", "").strip(),
-            openai_model=os.getenv("SLP_SUMMARY_OPENAI_MODEL", "").strip(),
-            openai_api_key=os.getenv("SLP_SUMMARY_OPENAI_API_KEY", "").strip(),
+            provider=os.getenv("SLP_SUMMARY_PROVIDER", "openai-compatible").strip(),
+            openai_base_url=os.getenv("SLP_SUMMARY_OPENAI_BASE_URL", _DEFAULT_BASE_URL).strip(),
+            openai_model=os.getenv("SLP_SUMMARY_OPENAI_MODEL", _DEFAULT_MODEL).strip(),
+            openai_api_key=os.getenv("SLP_SUMMARY_OPENAI_API_KEY", _DEFAULT_API_KEY).strip(),
+            quality_model=os.getenv("SLP_SUMMARY_OPENAI_QUALITY_MODEL", _DEFAULT_QUALITY_MODEL).strip(),
             timeout_s=timeout if timeout > 0 else 180.0,
+            fallback_to_extractive=fallback not in ("false", "0", "no"),
         )
 
     @property
     def openai_configured(self) -> bool:
         return bool(self.openai_base_url and self.openai_model and self.openai_api_key)
+
+    def model_for(self, quality: bool = False) -> str:
+        """根据 quality 标志选择模型。"""
+        if quality and self.quality_model:
+            return self.quality_model
+        return self.openai_model
 
 
 class SummaryGenerator:
@@ -215,8 +233,36 @@ class SummaryGenerator:
             }
         except SummaryGenerationError:
             raise
-        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
+        except (httpx.ConnectError, httpx.TimeoutException) as error:
+            # 连接级故障：模型服务不可达
+            if self.settings.fallback_to_extractive:
+                result = self._extractive(payload)
+                result["degraded"] = True
+                result["warnings"].append(
+                    f"模型服务不可达（{type(error).__name__}），已降级为规则摘录"
+                )
+                return result
+            raise SummaryGenerationError(
+                "summary_model_unavailable",
+                "模型服务不可达，且未启用降级",
+                status_code=503,
+            ) from error
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code >= 500 and self.settings.fallback_to_extractive:
+                result = self._extractive(payload)
+                result["degraded"] = True
+                result["warnings"].append(
+                    f"模型服务返回 {error.response.status_code}，已降级为规则摘录"
+                )
+                return result
             raise SummaryGenerationError(
                 "summary_generation_failed",
-                "真实模型请求或响应校验失败，未降级为规则摘要",
+                f"模型服务返回异常状态码 {error.response.status_code}",
+                status_code=502,
+            ) from error
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
+            # 校验级故障：响应格式错误、引用越界等，不降级
+            raise SummaryGenerationError(
+                "summary_generation_failed",
+                "模型响应校验失败，未降级为规则摘要",
             ) from error

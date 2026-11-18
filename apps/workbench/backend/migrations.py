@@ -291,11 +291,50 @@ def run_migrations(connection: sqlite3.Connection) -> None:
 
     if 7 not in applied:
         # 让 delivery_versions 同时支持 research_summary 和 contract_review 两种来源
-        # SQLite 的 ALTER TABLE 不支持改列约束，这里用 ALTER COLUMN NULLABLE 的替代方案：
-        # 直接 ALTER COLUMN 不行，先检查 summary_id 是否已有 NULL 值，再 ADD 新列
-        connection.execute(
-            # SQLite 3.35+ 支持 ALTER COLUMN
-            "ALTER TABLE delivery_versions ALTER COLUMN summary_id DROP NOT NULL"
+        # SQLite 不支持 ALTER COLUMN，用表重建方式使 summary_id 变为 nullable
+        connection.executescript(
+            """
+            PRAGMA foreign_keys=off;
+            BEGIN;
+            CREATE TABLE delivery_versions_new (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL REFERENCES cases(id),
+                summary_id TEXT REFERENCES research_summaries(id),
+                version_id TEXT NOT NULL REFERENCES research_summary_versions(id),
+                summary_title TEXT NOT NULL,
+                version_number INTEGER NOT NULL,
+                format TEXT NOT NULL,
+                status TEXT NOT NULL,
+                storage_key TEXT NOT NULL UNIQUE,
+                sha256 TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                facts TEXT NOT NULL DEFAULT '{}',
+                issues TEXT NOT NULL DEFAULT '[]',
+                generator_provider TEXT,
+                actual_model TEXT,
+                task_id TEXT,
+                exported_at TEXT NOT NULL
+            );
+            INSERT INTO delivery_versions_new (
+                id, case_id, summary_id, version_id, summary_title,
+                version_number, format, status, storage_key, sha256,
+                size_bytes, facts, issues, generator_provider, actual_model,
+                task_id, exported_at
+            )
+            SELECT id, case_id, summary_id, version_id, summary_title,
+                version_number, format, status, storage_key, sha256,
+                size_bytes, facts, issues, generator_provider, actual_model,
+                task_id, exported_at
+            FROM delivery_versions;
+            DROP TABLE delivery_versions;
+            ALTER TABLE delivery_versions_new RENAME TO delivery_versions;
+            CREATE INDEX IF NOT EXISTS idx_deliveries_case
+            ON delivery_versions(case_id, exported_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_deliveries_summary
+            ON delivery_versions(summary_id, exported_at DESC);
+            COMMIT;
+            PRAGMA foreign_keys=on;
+            """
         )
         connection.execute(
             "ALTER TABLE delivery_versions ADD COLUMN review_id TEXT "

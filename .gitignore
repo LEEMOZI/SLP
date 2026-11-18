@@ -55,6 +55,7 @@ MCP/law-search/data/
 MCP/law-search/tool_outputs/
 MCP/law-search/tests/results/
 .trae-html-share-packages/
+.trae/
 
 # 含本机鉴权信息的停用客户端配置
 MCP/law-search/mcp-entry-law-search-cloud.DISABLED.json

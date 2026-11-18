@@ -32,7 +32,8 @@ def test_builtin_extractive_uses_only_sources_and_never_calls_a_model():
         raise AssertionError("规则生成器不应发起外部请求")
 
     generator = SummaryGenerator(
-        SummarySettings(), transport=httpx.MockTransport(unexpected_request)
+        SummarySettings(provider="builtin-extractive"),
+        transport=httpx.MockTransport(unexpected_request),
     )
     client = TestClient(create_app(summary_generator=generator))
 
@@ -104,7 +105,12 @@ def test_openai_configuration_failure_does_not_fall_back_to_extractive():
         raise AssertionError("配置不完整时不应请求模型")
 
     generator = SummaryGenerator(
-        SummarySettings(provider="openai-compatible"),
+        SummarySettings(
+            provider="openai-compatible",
+            openai_base_url="",
+            openai_model="",
+            openai_api_key="",
+        ),
         transport=httpx.MockTransport(unexpected_request),
     )
     client = TestClient(create_app(summary_generator=generator))
@@ -127,6 +133,7 @@ def test_model_service_failure_and_unknown_citations_are_structured_errors():
             openai_base_url="https://model.example/v1",
             openai_model="configured-model",
             openai_api_key="secret-key",
+            fallback_to_extractive=False,
         ),
         transport=httpx.MockTransport(
             lambda _request: httpx.Response(500, text="secret-key internal failure")
@@ -167,9 +174,101 @@ def test_model_service_failure_and_unknown_citations_are_structured_errors():
     assert rejected.json()["detail"]["code"] == "summary_generation_failed"
 
 
+def test_connection_failure_falls_back_to_extractive():
+    """模型不可达时自动降级为规则摘录，响应带 degraded 标记。"""
+    def connect_error(_request):
+        raise httpx.ConnectError("connection refused")
+
+    settings = SummarySettings(
+        provider="openai-compatible",
+        openai_base_url="https://unreachable.example/v1",
+        openai_model="test-model",
+        openai_api_key="key",
+        fallback_to_extractive=True,
+    )
+    generator = SummaryGenerator(settings, transport=httpx.MockTransport(connect_error))
+    client = TestClient(create_app(summary_generator=generator))
+
+    response = client.post("/v1/summaries", json={**PAYLOAD, "provider": "openai-compatible"})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["degraded"] is True
+    assert body["provider"] == "builtin-extractive"
+    assert body["actual_model"] is None
+    assert any("降级" in w for w in body["warnings"])
+    assert "[[S1]]" in body["body"]
+
+
+def test_connection_failure_no_fallback_returns_503():
+    """fallback_to_extractive=False 时连接失败返回 503。"""
+    def connect_error(_request):
+        raise httpx.ConnectError("connection refused")
+
+    settings = SummarySettings(
+        provider="openai-compatible",
+        openai_base_url="https://unreachable.example/v1",
+        openai_model="test-model",
+        openai_api_key="key",
+        fallback_to_extractive=False,
+    )
+    generator = SummaryGenerator(settings, transport=httpx.MockTransport(connect_error))
+    client = TestClient(create_app(summary_generator=generator))
+
+    response = client.post("/v1/summaries", json={**PAYLOAD, "provider": "openai-compatible"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "summary_model_unavailable"
+
+
+def test_5xx_falls_back_to_extractive():
+    """模型返回 5xx 时降级为规则摘录。"""
+    def server_error(_request):
+        return httpx.Response(503, text="model overloaded")
+
+    settings = SummarySettings(
+        provider="openai-compatible",
+        openai_base_url="https://model.example/v1",
+        openai_model="test-model",
+        openai_api_key="key",
+        fallback_to_extractive=True,
+    )
+    generator = SummaryGenerator(settings, transport=httpx.MockTransport(server_error))
+    client = TestClient(create_app(summary_generator=generator))
+
+    response = client.post("/v1/summaries", json={**PAYLOAD, "provider": "openai-compatible"})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["degraded"] is True
+    assert any("503" in w for w in body["warnings"])
+
+
+def test_4xx_does_not_fallback():
+    """模型返回 4xx 时不降级，返回 502。"""
+    def client_error(_request):
+        return httpx.Response(401, text="unauthorized")
+
+    settings = SummarySettings(
+        provider="openai-compatible",
+        openai_base_url="https://model.example/v1",
+        openai_model="test-model",
+        openai_api_key="wrong-key",
+        fallback_to_extractive=True,
+    )
+    generator = SummaryGenerator(settings, transport=httpx.MockTransport(client_error))
+    client = TestClient(create_app(summary_generator=generator))
+
+    response = client.post("/v1/summaries", json={**PAYLOAD, "provider": "openai-compatible"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "summary_generation_failed"
+
+
 def test_summary_route_uses_internal_token(tmp_path, monkeypatch):
     monkeypatch.setenv("SLP_CAPABILITY_ADAPTER_TOKEN", "internal-secret")
     monkeypatch.setenv("SLP_WORKBENCH_MATERIAL_ROOT", str(tmp_path))
+    monkeypatch.setenv("SLP_SUMMARY_PROVIDER", "builtin-extractive")
     client = TestClient(create_app())
 
     assert client.post("/v1/summaries", json=PAYLOAD).status_code == 401

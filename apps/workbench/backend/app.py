@@ -1,10 +1,12 @@
 import os
+import asyncio
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .cases import (
@@ -1084,6 +1086,29 @@ def create_app(
             tasks_failed = _count("tasks", "status = 'failed'")
             deliveries = _count("delivery_versions")
 
+            # 任务类型分布
+            task_types: dict[str, int] = {}
+            for row in conn.execute(
+                "SELECT task_type, COUNT(*) AS c FROM tasks WHERE case_id = ? GROUP BY task_type",
+                (case_id,),
+            ):
+                task_types[row["task_type"]] = row["c"]
+
+            # 最近 5 条任务
+            recent_tasks = [
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "status": r["status"],
+                    "task_type": r["task_type"],
+                    "updated_at": r["updated_at"],
+                }
+                for r in conn.execute(
+                    "SELECT id, title, status, task_type, updated_at FROM tasks WHERE case_id = ? ORDER BY updated_at DESC LIMIT 5",
+                    (case_id,),
+                )
+            ]
+
         return {
             "case": case.model_dump(),
             "stats": {
@@ -1101,6 +1126,8 @@ def create_app(
                 "tasks_failed": tasks_failed,
                 "deliveries": deliveries,
             },
+            "task_types": task_types,
+            "recent_tasks": recent_tasks,
         }
 
     @app.get("/api/tasks", response_model=TaskList)
@@ -1137,6 +1164,27 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(error)) from error
         except (TaskNotFoundError, CaseArchivedError, TaskStateError) as error:
             raise_task_error(error)
+
+    @app.get("/api/tasks/{task_id}/stream")
+    async def stream_task(task_id: str):
+        """SSE 流式推送任务进度事件，任务终态后关闭连接。"""
+        async def event_generator():
+            last_progress = -1
+            while True:
+                try:
+                    detail = task_service.repository.get_detail(task_id)
+                except (TaskNotFoundError, TaskStateError):
+                    yield f"data: {json.dumps({'type': 'error', 'message': '任务不存在'})}\n\n"
+                    return
+                progress_changed = (detail.progress or 0) != last_progress
+                status_terminal = detail.status in ("completed", "partial", "failed", "cancelled")
+                if progress_changed or status_terminal:
+                    last_progress = detail.progress or 0
+                    yield f"data: {json.dumps(detail.model_dump(), ensure_ascii=False)}\n\n"
+                if status_terminal:
+                    return
+                await asyncio.sleep(0.5)
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     if enable_task_demo:
         @app.post("/api/demo/tasks", response_model=Task, status_code=201)

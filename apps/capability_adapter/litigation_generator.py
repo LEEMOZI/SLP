@@ -155,7 +155,7 @@ def build_litigation_prompt(
         "【写作要求】",
         "1. 严格使用简体中文；法条引用必须采用《法名》第X条格式，且仅限【可用法律依据】中出现的条文，不得虚构。",
         "2. 事实叙述须基于【案件事实】，不得臆测未出现的事实。",
-        "3. 若【可用法律依据】中没有能支持某项论述的条文，该处写"（本次检索证据未覆盖，建议人工核对相关法律规定）"，不得编造。",
+        "3. 若【可用法律依据】中没有能支持某项论述的条文，该处写“（本次检索证据未覆盖，建议人工核对相关法律规定）”，不得编造。",
         "4. 必须完整输出所有结构部分，不得省略。",
         "5. 直接输出文书正文，不要输出任何解释、前言或后记。",
     ])
@@ -302,7 +302,7 @@ class LitigationGenerator:
         )
 
         try:
-            document = self._call_llm(prompt, max_tokens=8000)
+            document = self._call_llm(prompt, max_tokens=8000, quality=payload.quality)
         except LitigationGenerationError:
             raise
         except Exception as exc:
@@ -342,13 +342,13 @@ class LitigationGenerator:
             "evidence_pack": evidence_pack,
         }
 
-    def _call_llm(self, prompt: str, *, max_tokens: int = 8000) -> str:
+    def _call_llm(self, prompt: str, *, max_tokens: int = 8000, quality: bool = False) -> str:
         try:
             response = httpx.post(
                 f"{self.settings.openai_base_url.rstrip('/')}/chat/completions",
                 headers={"Authorization": f"Bearer {self.settings.openai_api_key}"},
                 json={
-                    "model": self.settings.openai_model,
+                    "model": self.settings.model_for(quality),
                     "messages": [
                         {"role": "system", "content": "你是一名资深中国执业律师，专长诉讼文书起草。"},
                         {"role": "user", "content": prompt},
