@@ -6,6 +6,7 @@
     "core:default",
     "window-state:default",
     "dialog:default",
+    "updater:default",
     {
       "identifier": "fs:default",
       "allow": [

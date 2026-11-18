@@ -1202,7 +1202,8 @@ def create_app(
             except (TaskCaseNotFoundError, CaseArchivedError, TaskStateError) as error:
                 raise_task_error(error)
 
-    frontend_dist = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+    # 分发版通过 SLP_FRONTEND_DIST 指定前端路径；开发版使用默认相对路径
+    frontend_dist = Path(os.environ.get("SLP_FRONTEND_DIST", "")) if os.environ.get("SLP_FRONTEND_DIST") else Path(__file__).resolve().parents[1] / "frontend" / "dist"
     if frontend_dist.exists():
         assets = frontend_dist / "assets"
         if assets.exists():

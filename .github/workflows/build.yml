@@ -1,0 +1,115 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/workbench/frontend/package-lock.json
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r apps/capability_adapter/requirements.txt
+          pip install -r apps/workbench/requirements.txt
+          pip install pyinstaller
+
+      - name: Install frontend dependencies
+        run: |
+          cd apps/workbench/frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd apps/workbench/frontend
+          npm run build
+
+      - name: Build Python services (PyInstaller)
+        run: |
+          source .venv/bin/activate
+          cd apps/workbench
+          ./scripts/build.sh --skip-frontend
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: apps/workbench/frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: "SLP 法律工作台 ${{ github.ref_name }}"
+          releaseBody: |
+            ## SLP 法律工作台
+            一键安装、自动更新的法律工作台桌面应用。
+
+            ### 安装
+            下载 `.dmg` 文件，拖入 Applications 即可。
+
+            ### 更新
+            应用支持自动更新，启动时自动检查新版本。
+          releaseDraft: true
+          prerelease: false
+
+  # 签名 + 公证（在 tauri-action 之后）
+  notarize:
+    runs-on: macos-latest
+    needs: build-macos
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          DMG=$(find artifacts/ -name "*.dmg" | head -1)
+          if [[ -n "$DMG" ]]; then
+            xcrun notarytool submit "$DMG" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+            xcrun stapler staple "$DMG"
+            echo "Notarization complete"
+          else
+            echo "No DMG found, skipping notarization"
+          fi

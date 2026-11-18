@@ -17,6 +17,7 @@ MCP/law-search/.secrets/
 *.key
 .env
 .env.*
+!.env.example
 
 # ===== 运行时会话数据（可能含客户沟通内容） =====
 MCP/session-storage/data/
