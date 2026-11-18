@@ -101,32 +101,65 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          npx tauri build --bundles app,dmg
+          npx tauri build --bundles app
+
+      - name: Bundle resources into .app
+        run: |
+          APP_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/macos/SLP 法律工作台.app"
+          RES_DIR="$APP_DIR/Contents/Resources"
+          mkdir -p "$RES_DIR/binaries" "$RES_DIR/frontend/dist"
+          cp apps/workbench/frontend/src-tauri/resources/binaries/* "$RES_DIR/binaries/"
+          cp -R apps/workbench/frontend/src-tauri/resources/frontend-dist/. "$RES_DIR/frontend/dist/"
+          chmod +x "$RES_DIR/binaries/"*
+          echo "Bundled resources:"
+          ls -lh "$RES_DIR/binaries/"
+
+      - name: Create DMG
+        run: |
+          APP_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/macos/SLP 法律工作台.app"
+          DMG_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/dmg"
+          mkdir -p "$DMG_DIR"
+          hdiutil create \
+            -volname "SLP 法律工作台" \
+            -srcfolder "$APP_DIR" \
+            -ov -format UDZO \
+            "$DMG_DIR/SLP-法律工作台-${{ github.ref_name }}.dmg"
+
+      - name: Create updater tarball
+        working-directory: apps/workbench/frontend
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          OUT_DIR="src-tauri/target/release/bundle/macos"
+          cd "$OUT_DIR"
+          tar -czf "slp-workbench_${{ github.ref_name#v }}_aarch64-apple-darwin.app.tar.gz" "SLP 法律工作台.app"
+          cd "$GITHUB_WORKSPACE/apps/workbench/frontend"
+          npx tauri signer sign "$OUT_DIR/slp-workbench_${{ github.ref_name#v }}_aarch64-apple-darwin.app.tar.gz" \
+            --private-key "$TAURI_SIGNING_PRIVATE_KEY"
+          ls -lh "$OUT_DIR"/*.tar.gz "$OUT_DIR"/*.sig
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: slp-workbench-macos
           path: |
-            apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.app
             apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg
-          if-no-files-found: error
+            apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz
+            apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig
+          if-no-files-found: warn
 
       - name: Create GitHub Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          DMG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg)
+          TARBALL=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz)
+          SIG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig)
           gh release create "${GITHUB_REF_NAME}" \
             --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
-            --notes "一键安装、自动更新的法律工作台桌面应用。" \
+            --notes "一键安装、自动更新的法律工作台桌面应用。下载 .dmg 安装，应用支持自动更新。" \
             --draft \
-            apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg \
-            apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.app.tar.gz 2>/dev/null || \
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
-            --notes "一键安装、自动更新的法律工作台桌面应用。" \
-            --draft \
-            apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg
+            "$DMG" "$TARBALL" "$SIG"
 
 

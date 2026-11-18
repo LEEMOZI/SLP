@@ -38,10 +38,6 @@
       "icons/128x128.png",
       "icons/icon.icns"
     ],
-    "resources": {
-      "resources/binaries/*": "binaries/",
-      "resources/frontend-dist/**/*": "frontend/dist/"
-    },
     "macOS": {
       "minimumSystemVersion": "12.0"
     }
