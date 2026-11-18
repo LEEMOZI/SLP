@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use tauri::{
-    Manager,
+    Emitter, Manager,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     RunEvent, WindowEvent,
@@ -204,7 +204,7 @@ pub fn run() {
                 let _ = window.hide();
             }
         })
-        .run(tauri::generate_context!(), |app_handle, event| {
+        .on_run_event(|app_handle, event| {
             if let RunEvent::Exit = event {
                 if let Some(state) = app_handle.try_state::<Services>() {
                     for mut child in state.0.lock().unwrap().drain(..) {
@@ -214,5 +214,6 @@ pub fn run() {
                 }
             }
         })
+        .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
