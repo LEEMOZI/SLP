@@ -53,13 +53,54 @@ jobs:
       - name: Build Python services (PyInstaller)
         run: |
           source .venv/bin/activate
-          cd apps/workbench
-          ./scripts/build.sh --skip-frontend
+          # 打包 sidecar
+          pyinstaller \
+            --name slp-sidecar \
+            --onefile \
+            --clean \
+            --noconfirm \
+            --paths . \
+            --hidden-import apps.capability_adapter \
+            --hidden-import apps.capability_adapter.app \
+            --hidden-import apps.capability_adapter.parser \
+            --hidden-import apps.capability_adapter.retrieval \
+            --hidden-import apps.capability_adapter.judgments \
+            --hidden-import apps.capability_adapter.summarizer \
+            --hidden-import apps.capability_adapter.review_generator \
+            --hidden-import apps.capability_adapter.litigation_generator \
+            --hidden-import fitz \
+            --hidden-import docx \
+            --collect-all apps.capability_adapter \
+            apps/workbench/scripts/slp_sidecar_entry.py
+          # 打包 workbench
+          pyinstaller \
+            --name slp-workbench \
+            --onefile \
+            --clean \
+            --noconfirm \
+            --paths . \
+            --hidden-import apps.workbench.backend \
+            --hidden-import apps.workbench.backend.app \
+            --collect-all apps.workbench.backend \
+            apps/workbench/scripts/slp_workbench_entry.py
+
+      - name: Collect Tauri resources
+        run: |
+          RESOURCES_DIR="apps/workbench/frontend/src-tauri/resources"
+          mkdir -p "$RESOURCES_DIR/binaries" "$RESOURCES_DIR/frontend-dist"
+          cp dist/slp-sidecar "$RESOURCES_DIR/binaries/"
+          cp dist/slp-workbench "$RESOURCES_DIR/binaries/"
+          chmod +x "$RESOURCES_DIR/binaries/"*
+          cp -R apps/workbench/frontend/dist/. "$RESOURCES_DIR/frontend-dist/"
+          echo "Resources collected:"
+          ls -lh "$RESOURCES_DIR/binaries/"
+          du -sh "$RESOURCES_DIR/frontend-dist/"
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -82,34 +123,4 @@ jobs:
           releaseDraft: true
           prerelease: false
 
-  # 签名 + 公证（在 tauri-action 之后）
-  notarize:
-    runs-on: macos-latest
-    needs: build-macos
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Notarize
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          DMG=$(find artifacts/ -name "*.dmg" | head -1)
-          if [[ -n "$DMG" ]]; then
-            xcrun notarytool submit "$DMG" \
-              --apple-id "$APPLE_ID" \
-              --password "$APPLE_PASSWORD" \
-              --team-id "$APPLE_TEAM_ID" \
-              --wait
-            xcrun stapler staple "$DMG"
-            echo "Notarization complete"
-          else
-            echo "No DMG found, skipping notarization"
-          fi
