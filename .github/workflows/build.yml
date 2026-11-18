@@ -130,11 +130,12 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           OUT_DIR="src-tauri/target/release/bundle/macos"
           cd "$OUT_DIR"
-          tar -czf "slp-workbench_${{ github.ref_name#v }}_aarch64-apple-darwin.app.tar.gz" "SLP 法律工作台.app"
+          tar -czf "slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz" "SLP 法律工作台.app"
           cd "$GITHUB_WORKSPACE/apps/workbench/frontend"
-          npx tauri signer sign "$OUT_DIR/slp-workbench_${{ github.ref_name#v }}_aarch64-apple-darwin.app.tar.gz" \
+          npx tauri signer sign "$OUT_DIR/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz" \
             --private-key "$TAURI_SIGNING_PRIVATE_KEY"
           ls -lh "$OUT_DIR"/*.tar.gz "$OUT_DIR"/*.sig
 
