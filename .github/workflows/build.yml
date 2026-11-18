@@ -122,11 +122,12 @@ jobs:
           APP_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/macos/SLP 法律工作台.app"
           DMG_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/dmg"
           mkdir -p "$DMG_DIR"
+          VERSION="${GITHUB_REF_NAME#v}"
           hdiutil create \
             -volname "SLP 法律工作台" \
             -srcfolder "$APP_DIR" \
             -ov -format UDZO \
-            "$DMG_DIR/SLP-法律工作台-${{ github.ref_name }}.dmg"
+            "$DMG_DIR/SLP-Workbench-${VERSION}.dmg"
 
       - name: Create updater tarball
         working-directory: apps/workbench/frontend
@@ -140,7 +141,22 @@ jobs:
           cd "$GITHUB_WORKSPACE/apps/workbench/frontend"
           npx tauri signer sign "$OUT_DIR/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz" \
             --private-key "$TAURI_SIGNING_PRIVATE_KEY"
-          ls -lh "$OUT_DIR"/*.tar.gz "$OUT_DIR"/*.sig
+          SIG=$(cat "$OUT_DIR/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz.sig")
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cat > "$OUT_DIR/latest.json" <<EOF
+          {
+            "version": "${VERSION}",
+            "notes": "SLP 法律工作台 ${GITHUB_REF_NAME}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${SIG}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz"
+              }
+            }
+          }
+          EOF
+          ls -lh "$OUT_DIR"/*.tar.gz "$OUT_DIR"/*.sig "$OUT_DIR"/latest.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -150,6 +166,7 @@ jobs:
             apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg
             apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz
             apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig
+            apps/workbench/frontend/src-tauri/target/release/bundle/macos/latest.json
           if-no-files-found: warn
 
       - name: Create GitHub Release
@@ -160,15 +177,16 @@ jobs:
           DMG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/dmg/*.dmg)
           TARBALL=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz)
           SIG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig)
+          LATEST_JSON=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/latest.json)
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             echo "Release exists, uploading assets"
-            gh release upload "${GITHUB_REF_NAME}" "$DMG" "$TARBALL" "$SIG" --clobber
+            gh release upload "${GITHUB_REF_NAME}" "$DMG" "$TARBALL" "$SIG" "$LATEST_JSON" --clobber
           else
             gh release create "${GITHUB_REF_NAME}" \
               --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
               --notes "一键安装、自动更新的法律工作台桌面应用。下载 .dmg 安装，应用支持自动更新。" \
               --draft \
-              "$DMG" "$TARBALL" "$SIG"
+              "$DMG" "$TARBALL" "$SIG" "$LATEST_JSON"
           fi
 
 

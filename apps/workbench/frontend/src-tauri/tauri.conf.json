@@ -45,7 +45,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/LEEMOZI/SLP/releases/download/v{{version}}/slp-workbench_{{version}}_{{target}}-{{arch}}.app.tar.gz"
+        "https://github.com/LEEMOZI/SLP/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY5MTUyQjlGOTVBRDYyQ0MKUldUTVlxMlZueXNWK1RhRnFFQmNvK3FGMFRYb2tvQUZaTlFTcWJHNGMybzFialdUd20rWjRyWFoK"
     }
