@@ -5,12 +5,18 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "发布 tag（如 v0.2.0），留空则跳过 Release 步骤"
+        required: false
+        default: ""
 
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build-macos:
@@ -122,7 +128,7 @@ jobs:
           APP_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/macos/SLP 法律工作台.app"
           DMG_DIR="apps/workbench/frontend/src-tauri/target/release/bundle/dmg"
           mkdir -p "$DMG_DIR"
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           hdiutil create \
             -volname "SLP 法律工作台" \
             -srcfolder "$APP_DIR" \
@@ -134,7 +140,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           OUT_DIR="src-tauri/target/release/bundle/macos"
           cd "$OUT_DIR"
           tar -czf "slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz" "SLP 法律工作台.app"
@@ -146,12 +152,12 @@ jobs:
           cat > "$OUT_DIR/latest.json" <<EOF
           {
             "version": "${VERSION}",
-            "notes": "SLP 法律工作台 ${GITHUB_REF_NAME}",
+            "notes": "SLP 法律工作台 ${RELEASE_TAG}",
             "pub_date": "${PUB_DATE}",
             "platforms": {
               "darwin-aarch64": {
                 "signature": "${SIG}",
-                "url": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }}/slp-workbench_${VERSION}_aarch64-apple-darwin.app.tar.gz"
               }
             }
           }
@@ -170,7 +176,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Create GitHub Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(env.RELEASE_TAG, 'v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -178,12 +184,12 @@ jobs:
           TARBALL=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.tar.gz)
           SIG=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/*.sig)
           LATEST_JSON=$(ls apps/workbench/frontend/src-tauri/target/release/bundle/macos/latest.json)
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             echo "Release exists, uploading assets"
-            gh release upload "${GITHUB_REF_NAME}" "$DMG" "$TARBALL" "$SIG" "$LATEST_JSON" --clobber
+            gh release upload "${RELEASE_TAG}" "$DMG" "$TARBALL" "$SIG" "$LATEST_JSON" --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" \
-              --title "SLP 法律工作台 ${GITHUB_REF_NAME}" \
+            gh release create "${RELEASE_TAG}" \
+              --title "SLP 法律工作台 ${RELEASE_TAG}" \
               --notes "一键安装、自动更新的法律工作台桌面应用。下载 .dmg 安装，应用支持自动更新。" \
               --draft \
               "$DMG" "$TARBALL" "$SIG" "$LATEST_JSON"
